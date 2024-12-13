@@ -76,6 +76,7 @@ $I_{BB}(x) = \sum S_i'(x) + B_{BB} + Noise[\sigma_{BB}(x)]$
 - Show contours from BB image projected on (NB-μBB) image or vice versa?
 <!-- - Calibration sources could be stars with periodicity < 2 -->
 <!-- - hipparcos catalogue: for each star have ra, dec, periodicity, magnitude -->
+use symlognorm possibly to display data
 
 ---
 
@@ -120,7 +121,7 @@ class StarsRemover
 ---
 
 ## Questions
-- What is "Quality Criteria"
+- What is "Quality Criteria" -> Cnosider Skewness, or pixels arround a star in result image (is it normal dist) to check if star completely vanished or not
 - In what way do we show contours in the images?
 - How to/Should we calculate the fluxes?
 - Selecting subset of difference image (NB-μBB) where stars dominate over nebulae for best accuracy, how??
