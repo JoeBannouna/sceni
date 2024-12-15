@@ -66,6 +66,7 @@ $I_{BB}(x) = \sum S_i'(x) + B_{BB} + Noise[\sigma_{BB}(x)]$
 
 ## Possible Ideas
 <!-- Program should be able to: -->
+https://prod.liveshare.vsengsaas.visualstudio.com/join?F3816E774B568EB2AF1A32331246DE0D7030
 - Superimpose stars from catalogue onto result image
 - Mark all stars that have a mag larger than a set value
 - Restrict the list of stars to within a given teh field of view
@@ -78,6 +79,7 @@ $I_{BB}(x) = \sum S_i'(x) + B_{BB} + Noise[\sigma_{BB}(x)]$
 <!-- - hipparcos catalogue: for each star have ra, dec, periodicity, magnitude -->
 use symlognorm possibly to display data
 
+
 ---
 
 <style scoped>section {font-size: 20px;}</style>
@@ -85,6 +87,7 @@ use symlognorm possibly to display data
 ## What should program do? (in order)
 - Find optimal $\mu$
   - User provides BB & NB images, and scale factor range (e.g. $\mu \in [0, 2]$)
+  - User defines initial crop bounds in either pixels or (ra,dec) to remove unwanted/bad data from image before processing
   - User provides test region that will be used to calculate optimal $\mu$
   - Crop NB & BB data to the test region
   - Compute $NB-\mu \bullet BB$ for the range given in the test region
@@ -136,27 +139,100 @@ Hello
 
 ---
 
+<!-- _class: lead -->
 ## Codebase specifics
+
+---
+
 ```python
-import astrosceni
+from astrosceni import Image, Subtractor
 
-sceni = new astrosceni.sceni
+NB = Image()
+NB.load('path/to/NB/image.fits')
+NB.crop(xStart, xStop, yStart, yStop) # Pass in coordinates to keep
 
-sceni.NB('path/to/NB/image.fits')
-sceni.BB('path/to/BB/image.fits')
+BB = Image()
+BB.load('path/to/BB/image.fits')
+BB.crop(xStart, xStop, yStart, yStop) # Pass in coordinates to keep
 
-sceni.setScaleFactorRange([0, 2])
+# NB.crop and BB.crop is only to do prior cleaning before any operations
 
-# Find the scale factor
-factor = sceni.findOptimalScaleFactor()
+sub = Subtractor()
 
-# find image difference
-imageDiff = sceni.getImageDifference(scaleFactor=factor)
+sub.seNBImage(NB)
+sub.setBBImage(NB)
 
-# automatically uses optimal factor if none specified
-imageDiff = sceni.getImageDifference()
+sub.setScaleFactorRange([0, 2])
+sub.setTestRegion(
+  coordinateSystem=([ra_1, dec_1], [ra_2, dec_2]), 
+  # pixelSystem=([x_start, y_start], [x_end, y_end])
+)
 
-# Plot or save the image difference
-imageDiff.plot()
-imageDiff.save('path/to/save/image.fits')
+sub.calcOptimalScaleFactor()
+
+sub.plotPixelDist(mu=0.1) 
+# The above plots a histogram of the pixel distribution of a specific scale factor
+sub.plotSkewVsMu()
+# also overlay the optimal scale factor on the plot and print out its value
+
+sub.getResultImage()
 ```
+
+---
+
+```python
+from astrosceni import StarsFilter
+
+filter = StarsFilter()
+
+#Utilise a specific catalogue (can be defined by user)
+filter.setCatalogue("hipparcos")
+
+filter.getStarsInRegion(ra_1, ra_2, dec_1, dec_2, 
+                  min_mag=9, max_mag=1, 
+                  min_periodicity=0, max_periodicity=2)
+
+filter.setVisibleStars(NB)
+# a function to compare how visible a star is compared to the background
+# get data from an image object, loop over all the stars to compare
+# decide criteria for visible stars empirical by looking at plots
+
+filter.getVisibleStars() # Returns all stars that can be seen in image
+```
+
+---
+
+```python
+from astrosceni import StarsRemover
+
+remover = StarsRemover()
+
+remover.setRemovableStars(filter.getVisibleStars())
+remover.setTargetImage(NB)
+
+remover.removeStars()
+# image with stars removed stored here
+
+remover.getResultImage()
+# return image with stars removed 
+```
+
+---
+
+```python
+NB_remover.getResultImage()
+BB_remover.getResultImage()
+
+final_img = sub.getSubtractedImage(NB_remover.getResultImage(), BB_remover.getResultImage(), optimal_mu)
+
+final_img.setLabeledStars(filter.getVisibleStars())
+```
+
+---
+
+## Things to consider still
+
+If NB and BB images have different sizes or different RA, DEC limits, what to do??
+Should it be the responsibility of the user to properly crop using the Image.crop() function at the start?
+
+What if the user has 2 images that partially overlap and user doesn't really wanna put effort into crunching the numbers to do a proper crop? Should there be a function that takes in two images and just returns the two images cropped into the dimensions where they both overalp?
