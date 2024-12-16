@@ -188,14 +188,19 @@ filter = StarsFilter()
 #Utilise a specific catalogue (can be defined by user)
 filter.setCatalogue("hipparcos")
 
-filter.getStarsInRegion(ra_1, ra_2, dec_1, dec_2, 
-                  min_mag=9, max_mag=1, 
-                  min_periodicity=0, max_periodicity=2)
+filter.setRegion(ra_1, ra_2, dec_1, dec_2)
+
+filter.setMagLimit(min=9, max=1)   # Optional
+filter.setPeriodicityLimit(min=0, max=2)   # Optional
+
+# filter.getStarsInRegion(ra_1, ra_2, dec_1, dec_2, 
+#                   min_mag=9, max_mag=1, 
+#                   min_periodicity=0, max_periodicity=2)
 
 filter.setVisibleStars(NB)
 # a function to compare how visible a star is compared to the background
 # get data from an image object, loop over all the stars to compare
-# decide criteria for visible stars empirical by looking at plots
+# decide criteria for visible stars empirically by looking at plots
 
 filter.getVisibleStars() # Returns all stars that can be seen in image
 ```
@@ -224,8 +229,31 @@ NB_remover.getResultImage()
 BB_remover.getResultImage()
 
 final_img = sub.getSubtractedImage(NB_remover.getResultImage(), BB_remover.getResultImage(), optimal_mu)
+# subtract NB and BB using optimal mu and return result image
 
 final_img.setLabeledStars(filter.getVisibleStars())
+# Default always show stars labelled
+```
+
+---
+
+```python
+img1, img2 = ImageResizer.overlap(img1, img2)
+```
+
+---
+
+```python
+from astrosceni import Contour
+cont = Contour()
+cont.useImage(NB)
+# pass image
+cont.plot()
+# plot contour only
+
+NB.applyContour(cont) # apply contour to image class
+NB.plot()
+# plot image with contour superimposed
 ```
 
 ---
@@ -236,3 +264,59 @@ If NB and BB images have different sizes or different RA, DEC limits, what to do
 Should it be the responsibility of the user to properly crop using the Image.crop() function at the start?
 
 What if the user has 2 images that partially overlap and user doesn't really wanna put effort into crunching the numbers to do a proper crop? Should there be a function that takes in two images and just returns the two images cropped into the dimensions where they both overalp?
+
+---
+
+### Classes
+
+<style scoped>section { font-size: 1.37rem; }</style>
+
+- Image class
+  - load
+  - crop
+  - setLabeledStars
+  - plot
+- Subtractor class
+  - setNBImage
+  - setBBImage
+  - setScaleFactorRange
+  - setTestRegion (Optional)
+  - calcOptimalScaleFactor
+  - plotPixelDist
+  - plotSkewVsMu
+  - getResultImage
+  - getSutractedImage
+
+---
+
+<style scoped>section { font-size: 1.37rem; }</style>
+
+- StarsFilter
+  - setCatalogue (Optional)
+  - setRegion
+  - setMagLimit (Optional)
+  - setPeriodicityLimit (Optional)
+  - setVisibleStars
+  - getVisibleStars
+- StarsRemover
+  - setRemovableStars
+  - setTargetImage
+  - removeStars
+  - getResultImage
+- ImageResizer
+  - overlap (static)
+- Contour
+  - useImage
+  - plot
+
+---
+
+- Josh
+  - Subtractor class
+  - StarsRemover
+- Leo
+  - StarsFilter
+  - Contour
+- Youssef
+  - Image
+  - ImageResizer
