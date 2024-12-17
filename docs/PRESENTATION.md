@@ -66,7 +66,7 @@ $I_{BB}(x) = \sum S_i'(x) + B_{BB} + Noise[\sigma_{BB}(x)]$
 
 ## Possible Ideas
 <!-- Program should be able to: -->
-https://prod.liveshare.vsengsaas.visualstudio.com/join?F3816E774B568EB2AF1A32331246DE0D7030
+https://prod.liveshare.vsengsaas.visualstudio.com/join?C9F2E1A8DCBFBAABC0BBAEDA7DB8682A85E4
 - Superimpose stars from catalogue onto result image
 - Mark all stars that have a mag larger than a set value
 - Restrict the list of stars to within a given teh field of view
@@ -258,6 +258,15 @@ NB.plot()
 
 ---
 
+```python
+class Subtractor:
+  def __init__(self):
+    self.NB_image.image_data
+    self.BB_image
+```
+
+---
+
 ## Things to consider still
 
 If NB and BB images have different sizes or different RA, DEC limits, what to do??
@@ -273,7 +282,8 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 
 - Image class
   - load
-  - crop
+  - cropPixels
+  - cropCoords
   - setLabeledStars
   - plot
 - Subtractor class
