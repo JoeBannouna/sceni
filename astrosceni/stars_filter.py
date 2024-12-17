@@ -16,13 +16,10 @@ class StarsFilter:
         self.catalogue_id = "I/239"
         self.mag_min = None
         self.mag_max = None
-        self.period_min = None
-        self.period_max = None
-
 
     #Sets star catalogue
     def set_catalogue(self, catalogue_id):
-        self.catalogue_id = catalogue_id        
+        self.catalogue_id = catalogue_id
     
     #Gets star catalogue
     def get_catalogue(self):
@@ -94,11 +91,6 @@ class StarsFilter:
                 catalog_df = catalog_df[(catalog_df['Vmag'] >= self.mag_min)]
         if (self.mag_max != None):
                 catalog_df = catalog_df[(catalog_df['Vmag'] <= self.mag_max)]
-
-        # #Determine mathematically if stars are visible on the image by comparing surrounding pixel
-        # for i in range(0, catalog_df.shape[0]):
-        #     star_pixel_counts = image[catalog_df.iloc[catalog_df.columns.get_loc('x_pixels'), i]][catalog_df.iloc[catalog_df.columns.get_loc('y_pixels'), i]]
-        #     print(star_pixel_counts)
         
         self.visible_stars = catalog_df
     
