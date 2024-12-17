@@ -1,11 +1,13 @@
 from astropy.io import fits 
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
-from astropy.wcs.utils import proj_plane_pixel_scales, skycoord_to_pixel
+from astropy.wcs.utils import skycoord_to_pixel
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from astroquery.vizier import Vizier
+
+from astrosceni.image import Image
 
 #Takes in parameters set by user and outputs stars within image corresponding to given star catalogue
 class StarsFilter:
@@ -14,13 +16,10 @@ class StarsFilter:
         self.catalogue_id = "I/239"
         self.mag_min = None
         self.mag_max = None
-        self.period_min = None
-        self.period_max = None
-
 
     #Sets star catalogue
     def set_catalogue(self, catalogue_id):
-        self.catalogue_id = catalogue_id        
+        self.catalogue_id = catalogue_id
     
     #Gets star catalogue
     def get_catalogue(self):
@@ -59,8 +58,7 @@ class StarsFilter:
     #Generates a list of stars which are within the given image with respect to the parameters given by the user previously
     #CURRENTLY ONLY WORKS WITH HIPPARCUS CATALOGUE
     def set_visible_stars(self, image):
-        # Save header info
-        wcs = WCS(image.header)
+        hdu = image.getImageData(original = False)
         
         # Obtain catalog using astroquery utilising the catalog ID
         Vizier.ROW_LIMIT = -1
@@ -77,27 +75,22 @@ class StarsFilter:
         star_coords = SkyCoord(ra = catalog_df['_RA.icrs'], dec = catalog_df['_DE.icrs'], unit = 'deg')
         
         #create 2 pixel arrays with pixels corresponding to star positions on the image
-        x_pixels, y_pixels = skycoord_to_pixel(star_coords, wcs)
+        x_pixels, y_pixels = skycoord_to_pixel(star_coords, image.getWCS())
 
         #Add columns of xPixels and yPixels onto catalog
         catalog_df['x_pixels'] = x_pixels
         catalog_df['y_pixels'] = y_pixels
 
         catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0) &
-                                (catalog_df['x_pixels'] <= image.shape[1]) &
+                                (catalog_df['x_pixels'] <= hdu.shape[1]) &
                                 (catalog_df['y_pixels'] >= 0) &
-                                (catalog_df['y_pixels'] <= image.shape[0])]
+                                (catalog_df['y_pixels'] <= hdu.shape[0])]
 
         #Check if apparent magnitude was set by user, and if so further filter stars according to the limits given
         if (self.mag_min != None):
                 catalog_df = catalog_df[(catalog_df['Vmag'] >= self.mag_min)]
         if (self.mag_max != None):
                 catalog_df = catalog_df[(catalog_df['Vmag'] <= self.mag_max)]
-
-        # #Determine mathematically if stars are visible on the image by comparing surrounding pixel
-        # for i in range(0, catalog_df.shape[0]):
-        #     star_pixel_counts = image[catalog_df.iloc[catalog_df.columns.get_loc('x_pixels'), i]][catalog_df.iloc[catalog_df.columns.get_loc('y_pixels'), i]]
-        #     print(star_pixel_counts)
         
         self.visible_stars = catalog_df
     
