@@ -16,6 +16,7 @@ class StarsFilter:
         self.catalogue_id = "I/239"
         self.mag_min = None
         self.mag_max = None
+        self.customRegion = False
 
     #Sets star catalogue
     def set_catalogue(self, catalogue_id):
@@ -27,6 +28,7 @@ class StarsFilter:
     
     #Defines region in right ascension and declination
     def set_region(self, ra_min, ra_max, dec_min, dec_max):
+        self.customRegion = True
         self.ra_min = ra_min
         self.ra_max = ra_max
         self.dec_min = dec_min
@@ -64,6 +66,24 @@ class StarsFilter:
         Vizier.ROW_LIMIT = -1
         catalog_data = Vizier.get_catalogs(self.catalogue_id)[0]
         catalog_df = catalog_data.to_pandas()
+
+        #If user never specified a custom region, will analyse entire image passed to it
+        if self.customRegion == False:
+            #Define the corners of the image
+            corners = [
+                (0, 0),                # Bottom-left
+                (hdu.shape[1], 0),            # Bottom-right
+                (0, hdu.shape[0]),           # Top-left
+                (hdu.shape[1], hdu.shape[0])        # Top-right
+            ]
+
+            #Decide the Ra and Dec range of the image
+            raCorners, decCorners = (image.getWCS()).pixel_to_world_values(*zip(*corners))
+            self.ra_min = min(raCorners)
+            self.ra_max = max(raCorners)
+            self.dec_min = min(decCorners)
+            self.dec_max = max(decCorners)
+             
 
         #Create a copy of the catalog DF where the only stars remaining are those that are within the bounds set by the image
         catalog_df = catalog_df[(catalog_df['_RA.icrs'] >= self.ra_min) &
