@@ -1,4 +1,6 @@
 import numpy as np
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.wcs import WCS
@@ -63,121 +65,53 @@ class Image:
     self.cutout = cutout
     self.cutout_wcs = cutout.wcs
 
-  # def cropCoords(self, ra_start=None, ra_end=None, dec_start=None, dec_end=None, original=True):
-  #     """
-  #     Crops the image based on RA and Dec coordinates.
-  #     ra_start, ra_end, dec_start, dec_end: RA/Dec coordinates in degrees.
-  #     """
-  #     data = []
-  #     if original:
-  #         data = self.original_data
-  #     else:
-  #         data = self.current_data
+  def cropCoords(self, ra_start=None, ra_end=None, dec_start=None, dec_end=None, original=True):
+    """
+    Crops the image based on RA and Dec coordinates.
+    If None is passed, defaults to the image's RA/Dec boundaries.
 
+    ra_start, ra_end, dec_start, dec_end: RA/Dec coordinates in degrees.
+    """
+    data = self.getImageData(original)
 
+    # Image pixel boundaries
+    ny, nx = data.shape  # Shape: rows (Y) x columns (X)
 
-  #     # Convert RA/Dec to pixel coordinates
-  #     # The WCS object can convert world coordinates (RA/Dec) to pixel coordinates
-  #     x_start, y_start = self.wcs.all_world2pix(ra_start, dec_start, 0)
-  #     x_end, y_end = self.wcs.all_world2pix(ra_end, dec_end, 0)
+    # Convert pixel boundaries to RA/Dec
+    # Bottom-left (0, 0) and top-right (nx-1, ny-1)
+    ra_min, dec_min = self.original_wcs.all_pix2world(0, 0, 0)  # Bottom-left corner
+    ra_max, dec_max = self.original_wcs.all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
 
+    c = SkyCoord('00h42m30s', '+41d12m00s', frame='icrs')
 
-  #     # x_start = int(max(0, x_start)) if ra_start == None else None
+    if ra_start == None: ra_start = ra_min
+    if ra_end == None: ra_end = ra_max
+    if dec_start == None: dec_start = dec_min
+    if dec_end == None: dec_end = dec_max
 
-  #     # Ensure the values are within the bounds of the image
-  #     x_start, x_end = int(max(0, x_start)), int(min(data.shape[1] - 1, x_end))
-  #     y_start, y_end = int(max(0, y_start)), int(min(data.shape[0] - 1, y_end))
+    if isinstance(ra_start, str): ra_start = SkyCoord(ra=ra_start, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
+    if isinstance(ra_end, str): ra_end = SkyCoord(ra=ra_end, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
+    if isinstance(dec_start, str): dec_start = SkyCoord(ra="00h", dec=dec_start, unit=(u.hourangle, u.deg)).dec.deg
+    if isinstance(dec_end, str): dec_end = SkyCoord(ra="00h", dec=dec_end, unit=(u.hourangle, u.deg)).dec.deg
 
-  #     # Crop the data based on pixel indices calculated from RA/Dec
-  #     cropped = data[y_start:y_end+1, x_start:x_end+1]
-  #     self.current_data = cropped
+    print("ra_start", ra_start, "ra_end", ra_end, "dec_start", dec_start, "dec_end", dec_end)
 
-  # def cropCoords(self, ra_start=None, ra_end=None, dec_start=None, dec_end=None, original=True):
-  #   """
-  #   Crops the image based on RA and Dec coordinates.
-  #   If None is passed, defaults to the image's RA/Dec boundaries.
+    # Convert RA/Dec to pixel coordinates using WCS
+    position = self.original_wcs.all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0)
+    position = (position[0], position[1])  # x, y in pixel coordinates
+    pt1 = self.original_wcs.all_world2pix(ra_start, dec_start, 0)
+    pt2 = self.original_wcs.all_world2pix(ra_end, dec_end, 0)
+    size = (abs(pt2[1] - pt1[1]), abs(pt2[0] - pt1[0]))  # Height and width of the cutout
 
-  #   ra_start, ra_end, dec_start, dec_end: RA/Dec coordinates in degrees.
-  #   """
-  #   data = self.original_data if original else self.current_data
+    print(position)
+    print(size)
 
-  #   # Image pixel boundaries
-  #   ny, nx = data.shape  # Shape: rows (Y) x columns (X)
+    # Create the cutout using Cutout2D
+    cutout = Cutout2D(data, position, size, wcs=self.original_wcs)
 
-  #   # Convert pixel boundaries to RA/Dec
-  #   # Bottom-left (0, 0) and top-right (nx-1, ny-1)
-  #   ra_bl, dec_bl = self.wcs.all_pix2world(0, 0, 0)  # Bottom-left corner
-  #   ra_tr, dec_tr = self.wcs.all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
-
-  #   # Assign defaults if None
-  #   if ra_start is None:
-  #       ra_start = min(ra_bl, ra_tr)
-  #   if ra_end is None:
-  #       ra_end = max(ra_bl, ra_tr)
-  #   if dec_start is None:
-  #       dec_start = min(dec_bl, dec_tr)
-  #   if dec_end is None:
-  #       dec_end = max(dec_bl, dec_tr)
-
-  #   # Convert RA/Dec to pixel coordinates
-  #   x_start, y_start = self.wcs.all_world2pix(ra_start, dec_start, 0)
-  #   x_end, y_end = self.wcs.all_world2pix(ra_end, dec_end, 0)
-
-  #   # Ensure the pixel coordinates are within bounds
-  #   x_start, x_end = int(max(0, x_start)), int(min(nx - 1, x_end))
-  #   y_start, y_end = int(max(0, y_start)), int(min(ny - 1, y_end))
-
-  #   # Crop the data based on pixel indices
-  #   cropped = data[y_start:y_end+1, x_start:x_end+1]
-  #   self.current_data = cropped
-  #   self.current_header.update(self.wcs[y_start:y_end+1, x_start:x_end+1].to_header())
-
-
-  # def cropCoords(self, ra_start=None, ra_end=None, dec_start=None, dec_end=None, original=True):
-  #   """
-  #   Crops the image based on RA and Dec coordinates.
-  #   If None is passed, defaults to the image's RA/Dec boundaries.
-
-  #   ra_start, ra_end, dec_start, dec_end: RA/Dec coordinates in degrees.
-  #   """
-  #   data = self.getImageData(original)
-
-  #   # Image pixel boundaries
-  #   ny, nx = data.shape  # Shape: rows (Y) x columns (X)
-
-  #   # Convert pixel boundaries to RA/Dec
-  #   # Bottom-left (0, 0) and top-right (nx-1, ny-1)
-  #   ra_bl, dec_bl = self.wcs.all_pix2world(0, 0, 0)  # Bottom-left corner
-  #   ra_tr, dec_tr = self.wcs.all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
-
-  #   # Assign defaults if None
-  #   if ra_start is None:
-  #       ra_start = min(ra_bl, ra_tr)
-  #   if ra_end is None:
-  #       ra_end = max(ra_bl, ra_tr)
-  #   if dec_start is None:
-  #       dec_start = min(dec_bl, dec_tr)
-  #   if dec_end is None:
-  #       dec_end = max(dec_bl, dec_tr)
-
-  #   # Convert RA/Dec to pixel coordinates
-  #   x_start, y_start = self.wcs.all_world2pix(ra_start, dec_start, 0)
-  #   x_end, y_end = self.wcs.all_world2pix(ra_end, dec_end, 0)
-
-  #   # Ensure the pixel coordinates are within bounds
-  #   x_start, x_end = int(max(0, x_start)), int(min(nx - 1, x_end))
-  #   y_start, y_end = int(max(0, y_start)), int(min(ny - 1, y_end))
-
-  #   # Crop the data based on pixel indices
-  #   cropped = data[y_start:y_end+1, x_start:x_end+1]
-  #   self.current_data = cropped
-  #   self.current_header.update(self.wcs[y_start:y_end+1, x_start:x_end+1].to_header())
-
-
-
-
-  # def cropCoords(self, contour):
-
+    # Update current image data and WCS
+    self.cutout = cutout
+    self.cutout_wcs = cutout.wcs  # Update WCS to match the cutout
 
   # def setLabeledStars(self, contour):
 
@@ -191,8 +125,8 @@ class Image:
     
     fig = plt.figure()
 
-    # wcs = WCS(self.getCurrentWCS())
-    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getCurrentWCS())
+    # wcs = WCS(self.getWCS())
+    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS())
     fig.add_axes(ax)
 
     # Now with an other colormap and in logscale
@@ -214,7 +148,7 @@ class Image:
     if self.cutout: return self.cutout_wcs
     return self.original_wcs
   
-  def getImageData(self, original):
+  def getImageData(self, original=False):
     if original: return self.original_data
     elif self.cutout: return self.cutout.data
     else: return self.original_data
