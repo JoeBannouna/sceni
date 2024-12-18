@@ -18,10 +18,7 @@ class Contour:
     #class is initialized with no image
     def __init__(self):
         self.image_data = None
-
-    #Load image into the program
-    def useImage(self, image):
-        self.image_data = image.getImageData()
+        self.contour_data = None
 
     #Pre-processes data to enhance the visuals of faint object such as the hydrogen emission lines
     def preProcess(self):
@@ -30,17 +27,22 @@ class Contour:
         # norm = simple_norm(smoothed_data, stretch='sqrt')
         print("Sigma = 3")
         return smoothed_data
+    
+    #Load image into the program
+    def useImage(self, image):
+        self.image_data = image.getImageData()
+
+        processed_data = self.preProcess()
+        self.contour_data = processed_data
 
     #Plot the contour only
     def plot(self):
 
         if np.all(self.image_data) == None:
             raise ValueError("No image loaded, load an image using useImage()")
-        
-        processed_data = self.preProcess()
 
         plt.figure(figsize=(10, 8))
-        plt.contour(processed_data, levels = 10, cmap = 'viridis')
+        plt.contour(self.contour_data, levels = 10, cmap = 'viridis')
         plt.title("Contour plot")
         plt.xlabel("x-Axis")
         plt.ylabel("y-Axis")
