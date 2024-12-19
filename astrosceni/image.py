@@ -70,54 +70,173 @@ class Image:
     Crops the image based on RA and Dec coordinates.
     If None is passed, defaults to the image's RA/Dec boundaries.
 
-    ra_start, ra_end, dec_start, dec_end: RA/Dec coordinates in degrees.
+    Pass arguements in degrees or as string
     """
-    data = self.getImageData(original)
+    data = self.getImageData(original=original)
 
     # Image pixel boundaries
     ny, nx = data.shape  # Shape: rows (Y) x columns (X)
 
     # Convert pixel boundaries to RA/Dec
     # Bottom-left (0, 0) and top-right (nx-1, ny-1)
-    ra_min, dec_min = self.original_wcs.all_pix2world(0, 0, 0)  # Bottom-left corner
-    ra_max, dec_max = self.original_wcs.all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
-
-    c = SkyCoord('00h42m30s', '+41d12m00s', frame='icrs')
+    ra_min, dec_min = self.getWCS(original=original).all_pix2world(0, 0, 0)  # Bottom-left corner
+    ra_max, dec_max = self.getWCS(original=original).all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
 
     if ra_start == None: ra_start = ra_min
     if ra_end == None: ra_end = ra_max
     if dec_start == None: dec_start = dec_min
     if dec_end == None: dec_end = dec_max
 
-    if isinstance(ra_start, str): ra_start = SkyCoord(ra=ra_start, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
-    if isinstance(ra_end, str): ra_end = SkyCoord(ra=ra_end, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
-    if isinstance(dec_start, str): dec_start = SkyCoord(ra="00h", dec=dec_start, unit=(u.hourangle, u.deg)).dec.deg
-    if isinstance(dec_end, str): dec_end = SkyCoord(ra="00h", dec=dec_end, unit=(u.hourangle, u.deg)).dec.deg
-
-    print("ra_start", ra_start, "ra_end", ra_end, "dec_start", dec_start, "dec_end", dec_end)
+    # if isinstance(ra_start, str): ra_start = SkyCoord(ra=ra_start, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
+    # if isinstance(ra_end, str): ra_end = SkyCoord(ra=ra_end, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
+    # if isinstance(dec_start, str): dec_start = SkyCoord(ra="00h", dec=dec_start, unit=(u.hourangle, u.deg)).dec.deg
+    # if isinstance(dec_end, str): dec_end = SkyCoord(ra="00h", dec=dec_end, unit=(u.hourangle, u.deg)).dec.deg
+    ra_start = Image._convertDegRA(ra_start)
+    ra_end = Image._convertDegRA(ra_end)
+    dec_start = Image._convertDegDec(dec_start)
+    dec_end = Image._convertDegDec(dec_end)
 
     # Convert RA/Dec to pixel coordinates using WCS
-    position = self.original_wcs.all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0)
+    position = self.getWCS(original=original).all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0)
     position = (position[0], position[1])  # x, y in pixel coordinates
-    pt1 = self.original_wcs.all_world2pix(ra_start, dec_start, 0)
-    pt2 = self.original_wcs.all_world2pix(ra_end, dec_end, 0)
+    pt1 = self.getWCS(original=original).all_world2pix(ra_start, dec_start, 0)
+    pt2 = self.getWCS(original=original).all_world2pix(ra_end, dec_end, 0)
     size = (abs(pt2[1] - pt1[1]), abs(pt2[0] - pt1[0]))  # Height and width of the cutout
 
-    print(position)
-    print(size)
-
     # Create the cutout using Cutout2D
-    cutout = Cutout2D(data, position, size, wcs=self.original_wcs)
+    cutout = Cutout2D(data, position, size, wcs=self.getWCS(original=original))
 
     # Update current image data and WCS
     self.cutout = cutout
     self.cutout_wcs = cutout.wcs  # Update WCS to match the cutout
 
-  # def setLabeledStars(self, contour):
+  # def setLabeledStars(self, stars):
+  #   for star in stars:
+
 
   # def applyContour(self, contour):
 
-  def plot(self, original=False):
+  # Assumes both images have exact same zoom
+  # Consider zooming in for the lesser-zoomed in picture to fix this in the future?
+  @staticmethod
+  def overlap(img1, img2):
+    # Return 2 new images that are the overlap of the image
+
+    ra_min1, dec_min1, ra_max1, dec_max1 = img1.getBounds()
+    ra_min2, dec_min2, ra_max2, dec_max2 = img2.getBounds()
+    
+    # print(dec_min1, dec_max1, dec_min2, dec_max2)
+    is_ra_overlap, ra_overlap = Image._isOverlappedRA(ra_min1, ra_max1, ra_min2, ra_max2)
+    is_dec_overlap, dec_overlap = Image._isOverlappedDec(dec_min1, dec_max1, dec_min2, dec_max2)
+
+    if is_ra_overlap and is_dec_overlap:
+      # img1.cropCoords(), img2
+      return ra_overlap
+    else: return False
+    
+  
+  @staticmethod
+  def _isOverlappedDec(start1, end1, start2, end2):
+    """
+    Returns whether two RA intervals overlap, arguements are in decimal degrees
+    """
+    start1 = Image._convertDegDec(start1)
+    end1 = Image._convertDegDec(end1)
+    start2 = Image._convertDegDec(start2)
+    end2 = Image._convertDegDec(end2)
+
+    # overlap = ((start2 > end1 and start2 < start1) or (start2 < end1 and start2 > start1)) or ((end2 > end1 and end2 < start1) or (end2 < end1 and start2 > start1))
+
+    # return overlap
+
+    # Ensure intervals are properly ordered
+    start1, end1 = min(start1, end1), max(start1, end1)
+    start2, end2 = min(start2, end2), max(start2, end2)
+
+    # Check for overlap
+    if max(start1, start2) <= min(end1, end2):  # Overlap condition
+        overlap = True
+        # Calculate the intersection interval
+        intersection_start = max(start1, start2)
+        intersection_end = min(end1, end2)
+        return overlap, (intersection_start, intersection_end)
+    else:
+        overlap = False
+        return overlap, None
+
+  # @staticmethod
+  # def _isOverlappedRA(start1, end1, start2, end2):
+  #   """
+  #   Returns whether two RA intervals overlap, arguements are in decimal degrees
+  #   """
+  #   start1 = Image._convertDegRA(start1)
+  #   end1 = Image._convertDegRA(end1)
+  #   start2 = Image._convertDegRA(start2)
+  #   end2 = Image._convertDegRA(end2)
+
+  #   overlap = ((start2 > end1 and start2 < start1) or (start2 < end1 and start2 > start1)) or ((end2 > end1 and end2 < start1) or (end2 < end1 and start2 > start1))
+
+  #   return overlap
+
+  @staticmethod
+  def _isOverlappedDec(start1, end1, start2, end2):
+    """
+    Returns whether two Dec intervals overlap and the intersection interval if they overlap,
+    considering the possibility of a reversed Dec axis.
+
+    Arguments:
+        start1, end1, start2, end2: Dec intervals in decimal degrees.
+        wcs: WCS object to determine Dec orientation.
+
+    Returns:
+        overlap (bool): True if the intervals overlap, False otherwise.
+        intersection (tuple): A tuple (start, end) representing the intersection interval in decimal degrees.
+                              If there is no overlap, returns None.
+    """
+    # Detect Dec direction from the WCS object
+    dec_reversed = wcs.wcs.cd[1, 1] < 0 if wcs.wcs.has_cd() else wcs.wcs.pc[1, 1] < 0
+
+    # Reverse the intervals if Dec is reversed
+    if dec_reversed:
+        start1, end1 = -end1, -start1
+        start2, end2 = -end2, -start2
+
+    # Create SkyCoord objects for the Dec intervals
+    dec1 = SkyCoord(ra=0 * u.deg, dec=[start1, end1] * u.deg)
+    dec2 = SkyCoord(ra=0 * u.deg, dec=[start2, end2] * u.deg)
+
+    # Sort the intervals to ensure start <= end
+    start1, end1 = sorted(dec1.dec.degree)
+    start2, end2 = sorted(dec2.dec.degree)
+
+    # Check for overlap
+    overlap = max(start1, start2) <= min(end1, end2)
+
+    if overlap:
+        # Calculate intersection
+        intersection_start = max(start1, start2)
+        intersection_end = min(end1, end2)
+
+        # Reverse the intersection back if Dec is reversed
+        if dec_reversed:
+            intersection_start, intersection_end = -intersection_end, -intersection_start
+
+        return overlap, (intersection_start, intersection_end)
+    else:
+        return overlap, None
+
+
+  @staticmethod
+  def _convertDegRA(ra):
+    if isinstance(ra, str): return SkyCoord(ra=ra, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
+    return ra
+
+  @staticmethod
+  def _convertDegDec(dec):
+    if isinstance(dec, str): return SkyCoord(ra="00h", dec=dec, unit=(u.hourangle, u.deg)).dec.deg
+    return dec
+
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=True, labelCircleSize=10):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
     """
@@ -126,7 +245,7 @@ class Image:
     fig = plt.figure()
 
     # wcs = WCS(self.getWCS())
-    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS())
+    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS(original=original))
     fig.add_axes(ax)
 
     # Now with an other colormap and in logscale
@@ -142,13 +261,36 @@ class Image:
     # img.set_clim(1.1*np.min(image_data), np.max(image_data))
     cb.set_label('Counts')
 
+    if showCropped and self.cutout:
+      self.cutout.plot_on_original(color=croppedBorder)
+
+    if self.labeled_starts is not None and showLabeledStars:
+      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle((star['x_pixels'], star['y_pixels']), labelCircleSize, color='b', fill=False)), axis=1)
+
     plt.show()
 
-  def getWCS(self, orignial=False):
-    if self.cutout: return self.cutout_wcs
-    return self.original_wcs
+  def getWCS(self, original=False):
+    if original: return self.original_wcs
+    elif self.cutout: return self.cutout_wcs
+    else: return self.original_wcs
   
   def getImageData(self, original=False):
     if original: return self.original_data
     elif self.cutout: return self.cutout.data
     else: return self.original_data
+  
+  def getBounds(self):
+    """
+    Returns the coordinates at the bounds of the cropped image
+    """
+    data = self.getImageData()
+    ny, nx = data.shape  # Shape: rows (Y) x columns (X)
+
+    ra_min, dec_min = self.getWCS().all_pix2world(0, 0, 0)  # Bottom-left corner
+    ra_max, dec_max = self.getWCS().all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
+    return ra_min, dec_min, ra_max, dec_max
+
+  def setLabeledStars(self, stars_filter):
+    self.labeled_starts = stars_filter.getVisibleStars()
+
+  # Idea for overlap: find ra interval bounds in terms of pixels and then find the intersection interval in terms of pixels then convert back to ra_dec

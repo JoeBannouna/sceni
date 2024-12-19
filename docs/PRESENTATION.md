@@ -281,16 +281,13 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 <style scoped>section { font-size: 1.37rem; }</style>
 
 - Image class
-  - load
-<<<<<<< HEAD:PRESENTATION.md
-  - cropCoords (crops by coordinates)(Optional)
-  - cropPixel (crops by pixel value)(Optional)
-=======
-  - cropPixels
-  - cropCoords
->>>>>>> main:docs/PRESENTATION.md
-  - setLabeledStars
-  - plot
+  - ~~load~~
+  - ~~cropCoords~~ (crops by coordinates)(Optional)
+  - ~~cropPixel~~ (crops by pixel value)(Optional)
+  - ~~setLabeledStars~~
+  - ~~plot~~
+  - applyContour
+  - overlap (static)
 - Subtractor class
   - setNBImage
   - setBBImage
@@ -306,23 +303,23 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 
 <style scoped>section { font-size: 1.37rem; }</style>
 
-- StarsFilter
-  - setCatalogue (Optional)
-  - setRegion
-  - setMagLimit (Optional)
-  - setPeriodicityLimit (Optional)
-  - setVisibleStars
-  - getVisibleStars
+- ~~StarsFilter~~
+  - ~~setCatalogue (Optional)~~
+  - ~~setRegion~~
+  - ~~setMagLimit (Optional)~~
+  - ~~setPeriodicityLimit (Optional)~~
+  - ~~setVisibleStars~~
+  - ~~getVisibleStars~~
 - StarsRemover
   - setRemovableStars
   - setTargetImage
   - removeStars
   - getResultImage
 - ImageResizer
-  - overlap (static)
-- Contour
-  - useImage
-  - plot
+
+- ~~Contour~~
+  - ~~useImage~~
+  - ~~plot~~
 
 ---
 
