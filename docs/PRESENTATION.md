@@ -279,13 +279,13 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 ### Classes
 
 <style scoped>section { font-size: 1.37rem; }</style>
-
+https://prod.liveshare.vsengsaas.visualstudio.com/join?2BEE6F825061FF8F5F7F31F16CB212378A44
 - Image class
-  - load
-  - cropPixels
+  - ~~load~~
+  - ~~cropPixels~~
   - cropCoords
   - setLabeledStars
-  - plot
+  - ~~plot~~
 - Subtractor class
   - setNBImage
   - setBBImage
@@ -301,13 +301,13 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 
 <style scoped>section { font-size: 1.37rem; }</style>
 
-- StarsFilter
-  - setCatalogue (Optional)
-  - setRegion
-  - setMagLimit (Optional)
-  - setPeriodicityLimit (Optional)
-  - setVisibleStars
-  - getVisibleStars
+- ~~StarsFilter~~
+  - ~~setCatalogue (Optional)~~
+  - ~~setRegion~~
+  - ~~setMagLimit (Optional)~~
+  - ~~setPeriodicityLimit (Optional)~~
+  - ~~setVisibleStars~~
+  - ~~getVisibleStars~~
 - StarsRemover
   - setRemovableStars
   - setTargetImage
@@ -315,9 +315,9 @@ What if the user has 2 images that partially overlap and user doesn't really wan
   - getResultImage
 - ImageResizer
   - overlap (static)
-- Contour
-  - useImage
-  - plot
+- ~~Contour~~
+  - ~~useImage~~
+  - ~~plot~~
 
 ---
 
