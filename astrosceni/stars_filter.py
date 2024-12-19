@@ -28,16 +28,16 @@ class StarsFilter:
 
     #Sets star catalogue
     #Uses hipparcos catalogue by default, can set catalogue id, and if custom catalogie user must input RA, Dec and apparent magnitude column names
-    def setCatalogue(self, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag"):
+    def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag", ):
 
         #Check if given values are strings
         if (not isinstance(catalogue_id, str)) or (not isinstance(ra_col_name, str)) or (not isinstance(dec_col_name, str)) or (not isinstance(app_mag_col_name, str)):
             raise TypeError("Value must be a string.")
 
         #Save column names and save a copy of the catalog obtained
-        self.ra_column_name = ra_col_name
-        self.dec_column_name = dec_col_name
-        self.app_mag_column_name = app_mag_col_name
+        self.ra_col_name = ra_col_name.replace("(", "_").replace(")", "_").replace("-", "_")
+        self.dec_col_name = dec_col_name.replace("(", "_").replace(")", "_").replace("-", "_")
+        self.app_mag_col_name = app_mag_col_name.replace("(", "_").replace(")", "_").replace("-", "_")
 
         #Designate a file path
         file_name = catalogue_id.replace("/", "_") + ".csv"
@@ -50,13 +50,21 @@ class StarsFilter:
             catalog_df = pd.read_csv(file_path)
         else:
             #Previous file generated wasn't found, saving a new file with dataframe
-            print("Previous saved catalog file not found, obtaining and saving new copy.")
+            print("Previous saved catalog file not found")
 
             #Obtain catalog using astroquery utilising the catalog ID
-            Vizier.ROW_LIMIT = -1
-            catalog_data = Vizier.get_catalogs(catalogue_id)[0]
+            vizier = Vizier(columns = [ra_col_name, dec_col_name, app_mag_col_name])
+            vizier.ROW_LIMIT = -1
+            catalog_data = vizier.get_catalogs(catalogue_id)[0]
             catalog_df = catalog_data.to_pandas()
-            catalog_df.to_csv(file_path, index = False)
+
+            #Unless user doesnt specify, download catalogue to file
+            if download_catalogue == True:
+                catalog_df.to_csv(file_path, index = False)
+                print("Saving copy of catalogue from online into .csv file")
+            else:
+                print("Obtaining copy of catalogue from online")
+
 
         #Save catalog dataframe to class
         self.original_catalog_df = catalog_df.copy()
@@ -138,13 +146,13 @@ class StarsFilter:
             self.dec_max = max(decCorners)
 
         #Create a copy of the catalog DF where the only stars remaining are those that are within the bounds set by the image
-        catalog_df = catalog_df[(catalog_df[self.ra_column_name] >= self.ra_min) &
-                                (catalog_df[self.ra_column_name] <= self.ra_max) &
-                                (catalog_df[self.dec_column_name] >= self.dec_min) &
-                                (catalog_df[self.dec_column_name] <= self.dec_max)]
+        catalog_df = catalog_df[(catalog_df[self.ra_col_name] >= self.ra_min) &
+                                (catalog_df[self.ra_col_name] <= self.ra_max) &
+                                (catalog_df[self.dec_col_name] >= self.dec_min) &
+                                (catalog_df[self.dec_col_name] <= self.dec_max)]
 
         #Save the coordinates of the filtered catalog and their unit (degrees) within a SkyCoord object
-        star_coords = SkyCoord(ra = catalog_df[self.ra_column_name], dec = catalog_df[self.dec_column_name], unit = 'deg')
+        star_coords = SkyCoord(ra = catalog_df[self.ra_col_name], dec = catalog_df[self.dec_col_name], unit = 'deg')
         
         #create 2 pixel arrays with pixels corresponding to star positions on the image
         x_pixels, y_pixels = skycoord_to_pixel(star_coords, image.getWCS())
@@ -160,9 +168,9 @@ class StarsFilter:
         
         #Check if apparent magnitude was set by user, and if so further filter stars according to the limits given
         if (self.mag_min != None):
-                catalog_df = catalog_df[(catalog_df[self.app_mag_column_name] >= self.mag_min)]
+                catalog_df = catalog_df[(catalog_df[self.app_mag_col_name] >= self.mag_min)]
         if (self.mag_max != None):
-                catalog_df = catalog_df[(catalog_df[self.app_mag_column_name] <= self.mag_max)]
+                catalog_df = catalog_df[(catalog_df[self.app_mag_col_name] <= self.mag_max)]
 
 
         self.visible_stars_df = catalog_df
