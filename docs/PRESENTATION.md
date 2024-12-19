@@ -159,8 +159,8 @@ BB.crop(xStart, xStop, yStart, yStop) # Pass in coordinates to keep
 
 sub = Subtractor()
 
-sub.seNBImage(NB)
-sub.setBBImage(NB)
+sub.setNBImage(NB)
+sub.setBBImage(BB)
 
 sub.setScaleFactorRange([0, 2])
 sub.setTestRegion(
@@ -282,8 +282,13 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 
 - Image class
   - load
+<<<<<<< HEAD:PRESENTATION.md
+  - cropCoords (crops by coordinates)(Optional)
+  - cropPixel (crops by pixel value)(Optional)
+=======
   - cropPixels
   - cropCoords
+>>>>>>> main:docs/PRESENTATION.md
   - setLabeledStars
   - plot
 - Subtractor class
