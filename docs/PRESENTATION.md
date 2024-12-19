@@ -159,8 +159,8 @@ BB.crop(xStart, xStop, yStart, yStop) # Pass in coordinates to keep
 
 sub = Subtractor()
 
-sub.seNBImage(NB)
-sub.setBBImage(NB)
+sub.setNBImage(NB)
+sub.setBBImage(BB)
 
 sub.setScaleFactorRange([0, 2])
 sub.setTestRegion(
@@ -279,13 +279,15 @@ What if the user has 2 images that partially overlap and user doesn't really wan
 ### Classes
 
 <style scoped>section { font-size: 1.37rem; }</style>
-https://prod.liveshare.vsengsaas.visualstudio.com/join?2BEE6F825061FF8F5F7F31F16CB212378A44
+
 - Image class
   - ~~load~~
-  - ~~cropPixels~~
-  - cropCoords
-  - setLabeledStars
+  - ~~cropCoords~~ (crops by coordinates)(Optional)
+  - ~~cropPixel~~ (crops by pixel value)(Optional)
+  - ~~setLabeledStars~~
   - ~~plot~~
+  - applyContour
+  - overlap (static)
 - Subtractor class
   - setNBImage
   - setBBImage
@@ -314,7 +316,7 @@ https://prod.liveshare.vsengsaas.visualstudio.com/join?2BEE6F825061FF8F5F7F31F16
   - removeStars
   - getResultImage
 - ImageResizer
-  - overlap (static)
+
 - ~~Contour~~
   - ~~useImage~~
   - ~~plot~~
