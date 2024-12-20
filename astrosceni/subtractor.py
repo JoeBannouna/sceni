@@ -4,6 +4,8 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
+from astrosceni.image import Image
+
 class Subtractor():
 
     def __init__(self, NB, BB):
@@ -89,7 +91,7 @@ class Subtractor():
     
     # define a function to calculate NB - mu*BB
     @staticmethod
-    def getSubtractedImage(NB_arr, BB_arr, mu):
+    def getSubtractedImage(NB_image, BB_image, mu):
         """
         Calculates Narrowband - (scaling parameter)(Broadband).
 
@@ -108,9 +110,9 @@ class Subtractor():
         Residual: numpy array
             The residual numpy array"""
 
-        Residual_arr = NB_arr - mu*BB_arr
-
-        return  Residual_arr
+        if NB_image.getImageData().shape != BB_image.getImageData().shape: raise ValueError('Images must be the same size')
+        result = Image.subtract(NB_image, BB_image, mu=mu)
+        return result
 
 
     @staticmethod

@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 from astropy.coordinates import SkyCoord
 import astropy.units as u
@@ -63,6 +64,7 @@ class Image:
     cutout = Cutout2D(data, position, size, wcs=self.original_wcs)
     
     self.cutout = cutout
+    self.cutout_data = cutout.data
     self.cutout_wcs = cutout.wcs
 
   def cropCoords(self, ra_start=None, ra_end=None, dec_start=None, dec_end=None, original=True):
@@ -111,6 +113,7 @@ class Image:
 
     # Update current image data and WCS
     self.cutout = cutout
+    self.cutout_data = cutout.data
     self.cutout_wcs = cutout.wcs  # Update WCS to match the cutout
 
   # def setLabeledStars(self, contour):
@@ -144,11 +147,29 @@ class Image:
 
     plt.show()
 
-  def getWCS(self, orignial=False):
-    if self.cutout: return self.cutout_wcs
+  def getWCS(self, original=False):
+    if original: return self.original_wcs
+    elif self.cutout_data.size != 0: return self.cutout_wcs
     return self.original_wcs
   
   def getImageData(self, original=False):
     if original: return self.original_data
-    elif self.cutout: return self.cutout.data
+    elif self.cutout_data.size != 0: return self.cutout_data
     else: return self.original_data
+
+  @staticmethod
+  def subtract(NB_image, BB_image, mu=1):
+    result = copy.deepcopy(NB_image)
+    
+    nbdata = np.array([])
+    if NB_image.cutout != None: nbdata = NB_image.cutout_data
+    else: nbdata = NB_image.original_data
+
+    bbdata = np.array([])
+    if BB_image.cutout != None: bbdata = BB_image.cutout_data
+    else: bbdata = BB_image.original_data
+
+    result.cutout_data = nbdata - mu*bbdata
+    result.cutout_wcs = NB_image.getWCS()
+
+    return result
