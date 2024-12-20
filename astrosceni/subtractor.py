@@ -10,19 +10,19 @@ class Subtractor():
         """
         Parameters:
         -----------
-        NB: FITS file
-            The narrowband FITS file.
+        NB: image object
+            The narrowband image object.
             
-        BB: FITS file
-            The broadband FITS file.
+        BB: image object
+            The broadband image object.
         """
-        self.NB_image = NB
-        # convert NB FITS file to pandas dataframe
-        self.NB_df = pd.DataFrame(self.NB_image[0].data)
+  
+        # convert NB image object to pandas dataframe
+        self.NB_arr = np.array(NB.getImageData())
 
-        self.BB_image = BB
-        # convert BB FITS file to pandas dataframe
-        self.BB_df = pd.DataFrame(self.BB_image[0].data)
+
+        # convert BB image object to pandas dataframe
+        self.BB_arr = np.array(BB.getImageData())
 
    
     def setScaleFactorRange(self, min = 0.0, max = 2.0, interval = 0.01):
@@ -47,9 +47,12 @@ class Subtractor():
             Default value is 0.01.
         """
 
-        self.divisions = (max - min)/interval
+        assert min <= max, f"The minimum value, {min} is not less than the maximum value, {max}!"
+        assert (max - min) > interval, f"The interval {interval} is not less than the range, {max - min}!"
 
-        self.factors = np.linspace(min, max, self.divisions)
+        divisions = int((max - min)/interval)
+
+        self.factors = np.linspace(min, max, divisions)
 
 
     coord_types = ["coordinate system", "pixel value"]
@@ -80,65 +83,85 @@ class Subtractor():
 
 
         if coord_type == "pixel value":
-            self.NB_image = self.NB_image[x_1: x_2, y_1: y_2]
-            self.BB_image = self.BB_image[x_1: x_2, y_1: y_2]
+            self.NB_arr = self.NB_arr[x_1: x_2, y_1: y_2]
+            self.BB_arr = self.BB_arr[x_1: x_2, y_1: y_2]
 
     
-    # define a function to do NB - mu*BB
+    # define a function to calculate NB - mu*BB
     @staticmethod
-    def continuum_component_remover(NB_df, BB_df, mu):
+    def getSubtractedImage(NB_arr, BB_arr, mu):
         """
-        Does Narrowband - (scaling parameter)(Broadband).
+        Calculates Narrowband - (scaling parameter)(Broadband).
 
         Parameters
         ----------
-        NB_df: datafile 
-            Narrowband datafile
-        BB_df: datafile
-            Broadband datafile
+        NB_arr: numpy array 
+            Narrowband numpy array.
+        BB_arr: numpy array
+            Broadband numpy array.
         
         mu: int, float
             The scale factor.
         
         Returns
         -------
-        Residual: datafile
-            The residual datafile"""
+        Residual: numpy array
+            The residual numpy array"""
 
-        Residual_df = NB_df - mu*BB_df
+        Residual_arr = NB_arr - mu*BB_arr
 
-        return  Residual_df
+        return  Residual_arr
 
 
     @staticmethod
-    def skewness_calculator(Residual_df):
+    def skewnessCalculator(Residual_arr):
         """
         Calculates the skewness according to equation 1 from the paper (Sungryong Hong et al, 2014, Publications of the Astronomical Society of the Pacific).
 
         Parameters
         ----------
-        Residual_df: dataframe
-            The dataframe of the result from executing the continuum_component_remover function.
+        Residual_arr: numpy array
+            The numpy array of the result from executing the continuum_component_remover function.
         
         Returns
         -------
         skewness: float
             The value of the skewness for the scaling parameter used when executing the continuum_component_remover function."""
 
-        # N = Residual_df.size
-        # Residual_df - Residual_df.mean())/Residual_df.std() calculates the difference between each value in the dataframe Residual_df and the mean of all values in the dataframe then divides each result by the standard deviation of the values in the dataframe.
-        # .power(3) cubes each value from the above operation.
-        # .values.sum() takes all the values from the resulting dataframe after the above operations and sums up all the values.
-        skewness = (1/(Residual_df.size - 1)*((((Residual_df - Residual_df.values.mean())/Residual_df.values.std()).pow(3)).values.sum()))
+        # .flatten() makes a 2D numpy array into a 1D array.
+        # .mean() when acted on a 2D numpy array would take the mean of each row or column.
+        # Thus, to take the mean of all the entries in a 2D array, it must first be flattened.
+        # .std() when acted on a 2D array would take the standard deviation of each row or column.
+        # Thus, to take the standard deviation of all the entires in a 2D array, it must again first be flattened.
+        # The result of "Residual_arr - Residual_arr.flatten().mean())/Residual_arr.flatten().std()" is a 2D numpy array.
+        # .power(A, B) raises the power of each entry in A (a numpy array) to the power B (can either by a number of a numpy array)
+        # .sum() takes the sum of all the entries in a row or column.
+        # Hence, to take the sum of all the entries in the resultant 2D array, it needs to first be flattened.
+        skewness = (1/(Residual_arr.size - 1)*(np.power((Residual_arr - Residual_arr.flatten().mean())/Residual_arr.flatten().std(), 3)).flatten().sum())
 
         return skewness
 
-    skewness_vals = []
 
     def calcOptimalScaleFactor(self):
+        self.skewness_vals = [] # Ensure skewness_vals is reset to an empty list
+
         for mu in self.factors:
-            self.Residual_df = Subtractor.continuum_component_remover(self.NB_df, self.BB_df, mu)
-            skewness_vals = skewness_vals.append(Subtractor.skewness_calculator(self.Residual_df))
+            self.Residual_arr = Subtractor.getSubtractedImage(self.NB_arr, self.BB_arr, mu)
+            skewness_value = Subtractor.skewnessCalculator(self.Residual_arr)
+            self.skewness_vals.append(skewness_value)
+            
+        abs_skewness_vals = [] # Create an empty list to hold the magnitudes of the skewness values
+
+        for i in range(len(self.skewness_vals)):
+            abs_skewness_vals.append(abs(self.skewness_vals[i]))
+
+        # The index of the skewness value which is closest to 0 is the same as the index of the minimum absolute skewness value
+        index_optimal = abs_skewness_vals.index(min(abs_skewness_vals))
+
+        optimal_factor = self.factors[index_optimal]
+
+        return optimal_factor
+
 
     def plotPixelDistribution(self, scale_factor = 0.1, nbins = 301, lower_lim = -45000.0, upper_lim = 45000.0):
         """
@@ -163,8 +186,33 @@ class Subtractor():
             Upper limit for the range of the x-axis for the histogram.
         """
 
-        self.Residual_df = Subtractor.continuum_component_remover(self.NB_df, self.BB_df, scale_factor)
+        self.Residual_arr = Subtractor.getSubtractedImage(self.NB_arr, self.BB_arr, scale_factor)
 
-        plt.hist(self.Residual_df, nbins, range = (lower_lim, upper_lim))
-        plt.text(0, 1, f"mu = {scale_factor}", ha='left', va='top', transform=ax.transAxes)
-        plt.text(0.2, 1, f"skew = {Subtractor.skewness_calculator(self.Residual_df)}", ha='left', va='top', transform=ax.transAxes)
+        # Flatten the array for histogram plotting
+        flat_residual = self.Residual_arr.flatten()
+
+        # Plot the histogram
+        plt.hist(flat_residual, bins = nbins, range = (lower_lim, upper_lim))
+
+        plt.text(0.5 * upper_lim, 0.9 * plt.ylim()[1], f"mu = {scale_factor}", ha='left', va='top')
+        plt.text(0.5 * upper_lim, 0.4 * plt.ylim()[1], f"skew = {Subtractor.skewnessCalculator(self.Residual_arr): .2f}", ha='left', va='top')
+        plt.yscale('log')
+
+        # Label axes and display the plot
+        plt.xlabel("Pixel Value")
+        plt.ylabel("Frequency")
+        plt.title("Pixel Distribution")
+        plt.show()
+
+
+    def plotSkewVsMu(self):
+        plt.plot(self.factors, self.skewness_vals)
+
+        # Set axis labels, anything in between $^\$ will be displayed as a mathematical symbol
+        plt.xlabel('$^\mu$')
+        plt.ylabel('s($^\mu$)')
+
+    
+    def getResultImage(self):
+        # Turn Residual array back into a image class.
+        pass
