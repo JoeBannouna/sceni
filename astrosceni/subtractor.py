@@ -116,7 +116,7 @@ class Subtractor():
 
 
     @staticmethod
-    def skewnessCalculator(Residual_arr):
+    def skewnessCalculator(residual_image):
         """
         Calculates the skewness according to equation 1 from the paper (Sungryong Hong et al, 2014, Publications of the Astronomical Society of the Pacific).
 
@@ -139,8 +139,7 @@ class Subtractor():
         # .power(A, B) raises the power of each entry in A (a numpy array) to the power B (can either by a number of a numpy array)
         # .sum() takes the sum of all the entries in a row or column.
         # Hence, to take the sum of all the entries in the resultant 2D array, it needs to first be flattened.
-        skewness = (1/(Residual_arr.size - 1)*(np.power((Residual_arr - Residual_arr.flatten().mean())/Residual_arr.flatten().std(), 3)).flatten().sum())
-
+        skewness = (1/(residual_image.getImageData().size - 1)*(np.power((residual_image.getImageData() - residual_image.getImageData().flatten().mean())/residual_image.getImageData().flatten().std(), 3)).flatten().sum())
         return skewness
 
 
@@ -188,16 +187,16 @@ class Subtractor():
             Upper limit for the range of the x-axis for the histogram.
         """
 
-        self.Residual_arr = Subtractor.getSubtractedImage(self.NB_arr, self.BB_arr, scale_factor)
+        self.residual_image = Subtractor.getSubtractedImage(self.NB_arr, self.BB_arr, scale_factor)
 
         # Flatten the array for histogram plotting
-        flat_residual = self.Residual_arr.flatten()
+        flat_residual = self.residual_image.getImageData().flatten()
 
         # Plot the histogram
         plt.hist(flat_residual, bins = nbins, range = (lower_lim, upper_lim))
 
         plt.text(0.5 * upper_lim, 0.9 * plt.ylim()[1], f"mu = {scale_factor}", ha='left', va='top')
-        plt.text(0.5 * upper_lim, 0.4 * plt.ylim()[1], f"skew = {Subtractor.skewnessCalculator(self.Residual_arr): .2f}", ha='left', va='top')
+        plt.text(0.5 * upper_lim, 0.4 * plt.ylim()[1], f"skew = {Subtractor.skewnessCalculator(self.residual_image.getImageData()): .2f}", ha='left', va='top')
         plt.yscale('log')
 
         # Label axes and display the plot

@@ -17,6 +17,7 @@ class Image:
     self.original_data = None
     self.original_header = None
     self.cutout = None
+    self.cutout_data = np.array([])
 
     self.original_wcs = None  # Store WCS object for conversion
     self.cutout_wcs = None  # Store WCS object for conversion
