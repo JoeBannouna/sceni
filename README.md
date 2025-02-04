@@ -35,3 +35,16 @@ imageDiff = sceni.getImageDifference()
 imageDiff.plot()
 imageDiff.save('path/to/save/image.fits')
 ```
+
+
+```python
+img = Image()
+img.setNB('path/to/NB')
+img.setBB('path/to/NB')
+
+img.subtract()
+img.addStarCircle(mag>2, 'blue')
+img.addStarCircle(mag<=2, 'red')
+
+img   # Show image (use __repr__)
+```

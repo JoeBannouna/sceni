@@ -18,11 +18,11 @@ class Subtractor():
         """
         self.NB_image = NB
         # convert NB FITS file to pandas dataframe
-        self.NB_df = pd.DataFrame(self.NB_image[0].data)
+        self.NB_df = pd.DataFrame(self.NB_image.getImageData())
 
         self.BB_image = BB
         # convert BB FITS file to pandas dataframe
-        self.BB_df = pd.DataFrame(self.BB_image[0].data)
+        self.BB_df = pd.DataFrame(self.BB_image.getImageData())
 
    
     def setScaleFactorRange(self, min = 0.0, max = 2.0, interval = 0.01):
@@ -47,9 +47,12 @@ class Subtractor():
             Default value is 0.01.
         """
 
-        self.divisions = (max - min)/interval
+        if min >= max: raise ValueError('`min` must be smaller than `max`')
+        if (max - min) < interval: raise ValueError('interval must be less than range')
 
-        self.factors = np.linspace(min, max, self.divisions)
+        divisions = int((max - min)/interval)
+
+        self.factors = np.linspace(min, max, divisions)
 
 
     coord_types = ["coordinate system", "pixel value"]
@@ -88,7 +91,7 @@ class Subtractor():
     @staticmethod
     def continuum_component_remover(NB_df, BB_df, mu):
         """
-        Does Narrowband - (scaling parameter)(Broadband).
+        Calculates (Narrowband) - (scaling parameter)(Broadband).
 
         Parameters
         ----------
@@ -139,6 +142,15 @@ class Subtractor():
         for mu in self.factors:
             self.Residual_df = Subtractor.continuum_component_remover(self.NB_df, self.BB_df, mu)
             skewness_vals = skewness_vals.append(Subtractor.skewness_calculator(self.Residual_df))
+        for i in range(len(skewness_vals)):
+            skewness_vals[i] = abs(skewness_vals[i])
+
+        # The index of the skewness value which is closest to 0 is the same as the index of the minimum absolute skewness value
+        index_optimal = skewness_vals.index(min(skewness_vals))
+
+        optimal_factor = self.factors[index_optimal]
+
+        return optimal_factor
 
     def plotPixelDistribution(self, scale_factor = 0.1, nbins = 301, lower_lim = -45000.0, upper_lim = 45000.0):
         """

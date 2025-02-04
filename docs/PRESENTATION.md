@@ -92,7 +92,7 @@ use symlognorm possibly to display data
   - Crop NB & BB data to the test region
   - Compute $NB-\mu \bullet BB$ for the range given in the test region
   - Calculate skewness of image for $\mu$ range
-  - Find $\mu$ with skewness value closest to zero
+  - Find $\mu$ with skewness value closest to zero (not closest but at the plateau)
 - Remove stars
   - Get list of stars within the region of the full NB & BB images
   - Determine which stars can be seen (and thus need to be removed) (how?)

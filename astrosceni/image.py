@@ -11,7 +11,7 @@ from astropy.nddata import Cutout2D
 import os
 
 class Image:
-  def __init__(self):
+  def __init__(self, path=None):
     self.path = ""
     self.original_data = None
     self.original_header = None
@@ -19,6 +19,8 @@ class Image:
 
     self.original_wcs = None  # Store WCS object for conversion
     self.cutout_wcs = None  # Store WCS object for conversion
+
+    if (path != None): self.load(path)
 
   def load(self, path):
     """
@@ -45,16 +47,25 @@ class Image:
     Creates a cutout of the original image, to crop the currently cropped image pass `original=False`
     """
     data = self.getImageData(original)
+    print("IMAGE_DATA", self.getImageData(original).shape)
     
-    coords = np.argwhere(data)
-    row_min, col_min = coords.min(axis=0)
-    row_max, col_max = coords.max(axis=0)
+    # coords = np.argwhere(data)
+    # row_min, col_min = coords.min(axis=0)
+    # row_max, col_max = coords.max(axis=0)
+
+    row_min = 0
+    col_min = 0
+    row_max = data.shape[0] - 1
+    col_max = data.shape[1] - 1
 
     if x_start == None: x_start = col_min
     if x_end == None: x_end = col_max
     if y_start == None: y_start = row_min
     if y_end == None: y_end = row_max
     
+    print("COL_MAX", col_max)
+    print("COL_MIN", col_min)
+
     if x_end < 0: x_end = col_max + x_end
     if y_end < 0: y_end = row_max + y_end
 
@@ -241,7 +252,7 @@ class Image:
     Plots the cropped image by default, pass `original=True` to plot the original
     """
     data = self.getImageData(original)
-    
+
     fig = plt.figure()
 
     # wcs = WCS(self.getWCS())
@@ -264,8 +275,8 @@ class Image:
     if showCropped and self.cutout:
       self.cutout.plot_on_original(color=croppedBorder)
 
-    if self.labeled_starts is not None and showLabeledStars:
-      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle((star['x_pixels'], star['y_pixels']), labelCircleSize, color='b', fill=False)), axis=1)
+    # if self.labeled_stars is not None and showLabeledStars:
+    #   self.labeled_stars.apply(lambda star: ax.add_patch(plt.Circle((star['x_pixels'], star['y_pixels']), labelCircleSize, color='b', fill=False)), axis=1)
 
     plt.show()
 
@@ -290,7 +301,21 @@ class Image:
     ra_max, dec_max = self.getWCS().all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
     return ra_min, dec_min, ra_max, dec_max
 
+  def plotHist(self, nbins=200):
+    # flatten means: we put our 2d array in a 1d array
+    histogram = plt.hist(self.getImageData().flatten(), nbins)
+
+    plt.xlabel('Pixel Content')
+    plt.ylabel('Number of Pixels')
+    plt.yscale('log')
+    plt.show()
+
   def setLabeledStars(self, stars_filter):
-    self.labeled_starts = stars_filter.getVisibleStars()
+    self.labeled_stars = stars_filter.getVisibleStars()
+
+  def _printInfo(self, original=False):
+    if original: print("Original", self.original_data.shape)
+    elif self.cutout != None: print("Original", self.cutout.data.shape)
+    else: print("Original", self.original_data.shape)
 
   # Idea for overlap: find ra interval bounds in terms of pixels and then find the intersection interval in terms of pixels then convert back to ra_dec
