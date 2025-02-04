@@ -289,6 +289,12 @@ class Image:
     if original: return self.original_data
     elif self.cutout: return self.cutout.data
     else: return self.original_data
+
+  def setImageData(self, data, original=False):
+    
+    if original: self.original_data = data
+    elif self.cutout: self.cutout.data = data
+    else: self.original_data = data
   
   def getBounds(self):
     """
