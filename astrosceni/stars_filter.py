@@ -348,7 +348,9 @@ class StarsFilter:
             #Replace star region with abckground level
             new_image_data[y_min:y_max, x_min:x_max] = background_level
 
-        return new_image_data
+        image.original_data = new_image_data
+
+        return image
 
     #Returns the list of stars in region
     def getStarsInRegion(self):
