@@ -348,6 +348,7 @@ class StarsFilter:
             #Replace star region with abckground level
             new_image_data[y_min:y_max, x_min:x_max] = background_level
 
+        #Saves new image data in place of old image data
         image.original_data = new_image_data
 
         return image
