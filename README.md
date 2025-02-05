@@ -35,3 +35,31 @@ imageDiff = sceni.getImageDifference()
 imageDiff.plot()
 imageDiff.save('path/to/save/image.fits')
 ```
+## Simplified Usage Example (more reccomended)
+
+```python
+from astrosceni import Image
+
+img = Image(BB='path/to/BB', NB='path/to/NB')
+
+# optionally
+img.BB('path/to/BB')
+img.NB('path/to/NB')
+
+img.subtract()
+
+img.showStars()
+img.showContour()
+
+img.addStars()
+img.addContour()
+
+img.setCatalogue()
+
+img.addStarCircle(mag>2, color='blue')
+img.addStarCircle(mag<=2, color='red')
+
+img.addContour('file.fits', color=None)
+
+img    # show image (use __repr__)
+```
