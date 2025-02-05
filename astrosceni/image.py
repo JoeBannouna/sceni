@@ -8,8 +8,11 @@ from astropy.wcs import WCS
 from astropy.visualization.wcsaxes import WCSAxes
 from matplotlib.colors import LogNorm, SymLogNorm
 from astropy.nddata import Cutout2D
+import os, warnings
 
-import os
+#Simplifies warning message
+warnings.simplefilter('always', UserWarning)
+warnings.formatwarning = lambda message, *args: f"{message}\n"
 
 class Image:
   def __init__(self, path=None):
@@ -22,10 +25,27 @@ class Image:
 
     self.original_wcs = None  # Store WCS object for conversion
     self.cutout_wcs = None  # Store WCS object for conversion
-
+    
     if (path != None): self.load(path)
 
-  def load(self, path):
+  #Determines how many saturated pixels are in image, compares as ratio to resolution and provides warning if necessary
+  def checkSaturatedPixelCount(self, saturatedRatioLim):
+    count = np.sum(self.original_data > (2**15)-2)
+    print("Count of saturated pixels: ", count)
+    resolution = len(self.original_data) * len(self.original_data[0])
+    print("Total image pixel count: ", resolution)
+
+    ratio = count/resolution
+
+    if (ratio >= saturatedRatioLim):
+      warnings.warn("WARNING: Saturated pixels account for %.2f%% of total pixel count of image" % (100*ratio))
+
+  def setSaturatedPixelsToNan(self, data):
+    data[data > (2**15)-2] = np.nan
+    return data
+    
+
+  def load(self, path, saturatedRatioLim = 0.001):
     """
     Loads the image data and headers from a fits file
     """
@@ -34,6 +54,7 @@ class Image:
     hdu = fits.open(filename)
     
     self.original_data = hdu[0].data
+    self.checkSaturatedPixelCount(saturatedRatioLim)
     self.original_header = hdu[0].header
 
     # Initialize WCS object from the FITS header
@@ -157,6 +178,73 @@ class Image:
       self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle((star['x_pixels'], star['y_pixels']), labelCircleSize, color='b', fill=False)), axis=1)
 
     plt.show()
+
+  def zoomToPoint(self, x = None, y = None, ra = None, dec = None, zoom_size = 50, original = False, custom_vmin = None, custom_vmax = None, custom_cmap = 'grey', show_colorbar = True,
+                   setSaturatedToNan = False, use_log_norm = False):
+
+    """
+    Zooms into image around point
+    - (x, y) pixel coordinates or
+    - (ra, dec) world coordinates
+
+    - zoom_size = half-width of zoom-in window in pixels
+    - original = whether to zoom in from original image or already cropped image
+
+    """
+
+    data = self.getImageData(original)
+    wcs = self.getWCS(original)
+
+    if (setSaturatedToNan == True):
+      data = self.setSaturatedPixelsToNan(data)
+    print(np.nanmax(data))
+
+    if ra is not None and dec is not None:
+      x, y = wcs.all_world2pix(ra, dec, 0)
+
+    if x is None or y is None:
+      raise ValueError("Pixel coordinates (x, y) or world coordinates (ra, dec) must be provided")
+    
+    x, y = int(x), int(y)
+
+    # Defining zoom window size
+    x_start, x_end = max(0, x - zoom_size), min(x + zoom_size, data.shape[1])
+    y_start, y_end = max(0, y - zoom_size), min(y + zoom_size, data.shape[0])
+
+    #Extract zoom region
+    zoomed_data = data[y_start:y_end, x_start:x_end]
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    if (custom_vmin == None):
+      vmin = np.nanmin(data)
+    else:
+      vmin = custom_vmin
+    if (custom_vmax == None):
+      vmax = np.nanmax(data)
+    else:
+      vmax = custom_vmax
+
+    norm = None
+    if (use_log_norm == True):
+      norm = LogNorm(vmin=vmin, vmax=vmax)
+      img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, norm=norm)
+    else:
+      img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, vmin = vmin, vmax = vmax)
+
+    ax.scatter(x-x_start, y-y_start, color = 'red', marker = '+', label = "Zoom Center")
+    ax.set_xlim(0, x_end - x_start)
+    ax.set_ylim(0, y_end - y_start)
+    ax.set_title(f"Zoomed-in View (Center: x = {x}, y = {y})")
+    ax.set_xlabel("X Pixel")
+    ax.set_ylabel("Y Pixel")
+    ax.legend()
+
+    if (show_colorbar == True):
+      cbar = fig.colorbar(img, ax = ax, fraction = 0.05, pad = 0.04)
+      cbar.set_label("Pixel Intensity")
+
+    plt.show()
+    
 
   def getWCS(self, original=False):
     if original: return self.original_wcs
