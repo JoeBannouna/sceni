@@ -249,12 +249,25 @@ class Image:
   def getWCS(self, original=False):
     if original: return self.original_wcs
     elif self.cutout_data.size != 0: return self.cutout_wcs
-    return self.original_wcs
+    else: return self.original_wcs
+    
+  def setWCS(self, wcs, original=False):
+    if original: self.original_wcs = wcs
+    elif self.cutout_data.size != 0: self.cutout_wcs = wcs
+    else: self.original_wcs = wcs
   
   def getImageData(self, original=False):
     if original: return self.original_data
     elif self.cutout_data.size != 0: return self.cutout_data
     else: return self.original_data
+  
+  def setImageData(self, data, original=False):
+    """
+    When calling this function its important to remember that WCS is invalid unless setWCS is called along with this function to ensure the data is coherent
+    """
+    if original: self.original_data = data
+    elif self.cutout_data.size != 0: self.cutout_data = data
+    else: self.original_data = data
   
   def getBounds(self):
     """
@@ -288,3 +301,12 @@ class Image:
     self.labeled_starts = stars_filter.getVisibleStars()
 
   # def applyContour(self, contour):
+
+  def plotHist(self, nbins=200):
+    # flatten means: we put our 2d array in a 1d array
+    histogram = plt.hist(self.getImageData().flatten(), nbins)
+
+    plt.xlabel('Pixel Content')
+    plt.ylabel('Number of Pixels')
+    plt.yscale('log')
+    plt.show()
