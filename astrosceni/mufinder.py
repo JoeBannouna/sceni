@@ -22,7 +22,7 @@ class MuFinder():
             self.setMuRangeAuto()
         else:
             divisions = int((self.mu_range[1] - self.mu_range[0])/self.mu_resolution)
-            self.mu_linspace = np.linspace()
+            self.mu_linspace = np.linspace(self.mu_range[0], self.mu_range[1], divisions)
 
     def setMuResolution(self, mu_resolution):
         self.mu_resolution = mu_resolution
