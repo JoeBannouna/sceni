@@ -8,12 +8,16 @@ from astropy.wcs import WCS
 from astropy.visualization.wcsaxes import WCSAxes
 from matplotlib.colors import LogNorm, SymLogNorm
 from astropy.nddata import Cutout2D
+import os, warnings
 
-import os
+#Simplifies warning message
+warnings.simplefilter('always', UserWarning)
+warnings.formatwarning = lambda message, *args: f"{message}\n"
 
 class Image:
-  def __init__(self):
+  def __init__(self, path=None):
     self.path = ""
+    self.labeled_starts = None
     self.original_data = None
     self.original_header = None
     self.cutout = None
@@ -21,8 +25,27 @@ class Image:
 
     self.original_wcs = None  # Store WCS object for conversion
     self.cutout_wcs = None  # Store WCS object for conversion
+    
+    if (path != None): self.load(path)
 
-  def load(self, path):
+  #Determines how many saturated pixels are in image, compares as ratio to resolution and provides warning if necessary
+  def checkSaturatedPixelCount(self, saturatedRatioLim):
+    count = np.sum(self.original_data > (2**15)-2)
+    print("Count of saturated pixels: ", count)
+    resolution = len(self.original_data) * len(self.original_data[0])
+    print("Total image pixel count: ", resolution)
+
+    ratio = count/resolution
+
+    if (ratio >= saturatedRatioLim):
+      warnings.warn("WARNING: Saturated pixels account for %.2f%% of total pixel count of image" % (100*ratio))
+
+  def setSaturatedPixelsToNan(self, data):
+    data[data > (2**15)-2] = np.nan
+    return data
+    
+
+  def load(self, path, saturatedRatioLim = 0.001):
     """
     Loads the image data and headers from a fits file
     """
@@ -31,6 +54,7 @@ class Image:
     hdu = fits.open(filename)
     
     self.original_data = hdu[0].data
+    self.checkSaturatedPixelCount(saturatedRatioLim)
     self.original_header = hdu[0].header
 
     # Initialize WCS object from the FITS header
@@ -73,55 +97,56 @@ class Image:
     Crops the image based on RA and Dec coordinates.
     If None is passed, defaults to the image's RA/Dec boundaries.
 
-    ra_start, ra_end, dec_start, dec_end: RA/Dec coordinates in degrees.
+    Pass arguements in degrees or as string
     """
-    data = self.getImageData(original)
+    data = self.getImageData(original=original)
 
     # Image pixel boundaries
     ny, nx = data.shape  # Shape: rows (Y) x columns (X)
 
     # Convert pixel boundaries to RA/Dec
     # Bottom-left (0, 0) and top-right (nx-1, ny-1)
-    ra_min, dec_min = self.original_wcs.all_pix2world(0, 0, 0)  # Bottom-left corner
-    ra_max, dec_max = self.original_wcs.all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
-
-    c = SkyCoord('00h42m30s', '+41d12m00s', frame='icrs')
+    ra_min, dec_min = self.getWCS(original=original).all_pix2world(0, 0, 0)  # Bottom-left corner
+    ra_max, dec_max = self.getWCS(original=original).all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
 
     if ra_start == None: ra_start = ra_min
     if ra_end == None: ra_end = ra_max
     if dec_start == None: dec_start = dec_min
     if dec_end == None: dec_end = dec_max
 
-    if isinstance(ra_start, str): ra_start = SkyCoord(ra=ra_start, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
-    if isinstance(ra_end, str): ra_end = SkyCoord(ra=ra_end, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
-    if isinstance(dec_start, str): dec_start = SkyCoord(ra="00h", dec=dec_start, unit=(u.hourangle, u.deg)).dec.deg
-    if isinstance(dec_end, str): dec_end = SkyCoord(ra="00h", dec=dec_end, unit=(u.hourangle, u.deg)).dec.deg
-
-    print("ra_start", ra_start, "ra_end", ra_end, "dec_start", dec_start, "dec_end", dec_end)
+    ra_start = Image._convertDegRA(ra_start)
+    ra_end = Image._convertDegRA(ra_end)
+    dec_start = Image._convertDegDec(dec_start)
+    dec_end = Image._convertDegDec(dec_end)
 
     # Convert RA/Dec to pixel coordinates using WCS
-    position = self.original_wcs.all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0)
+    position = self.getWCS(original=original).all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0)
     position = (position[0], position[1])  # x, y in pixel coordinates
-    pt1 = self.original_wcs.all_world2pix(ra_start, dec_start, 0)
-    pt2 = self.original_wcs.all_world2pix(ra_end, dec_end, 0)
+    pt1 = self.getWCS(original=original).all_world2pix(ra_start, dec_start, 0)
+    pt2 = self.getWCS(original=original).all_world2pix(ra_end, dec_end, 0)
     size = (abs(pt2[1] - pt1[1]), abs(pt2[0] - pt1[0]))  # Height and width of the cutout
 
-    print(position)
-    print(size)
-
     # Create the cutout using Cutout2D
-    cutout = Cutout2D(data, position, size, wcs=self.original_wcs)
+    cutout = Cutout2D(data, position, size, wcs=self.getWCS(original=original))
 
     # Update current image data and WCS
     self.cutout = cutout
     self.cutout_data = cutout.data
     self.cutout_wcs = cutout.wcs  # Update WCS to match the cutout
 
-  # def setLabeledStars(self, contour):
+  @staticmethod
+  def _convertDegRA(ra):
+    """Converts 'ra' string/numerical input to degrees"""
+    if isinstance(ra, str): return SkyCoord(ra=ra, dec="0d", unit=(u.hourangle, u.deg)).ra.deg
+    return ra
 
-  # def applyContour(self, contour):
+  @staticmethod
+  def _convertDegDec(dec):
+    """Converts 'dec' string/numerical input to degrees"""
+    if isinstance(dec, str): return SkyCoord(ra="00h", dec=dec, unit=(u.hourangle, u.deg)).dec.deg
+    return dec
 
-  def plot(self, original=False):
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=True, labelCircleSize=10):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
     """
@@ -130,7 +155,7 @@ class Image:
     fig = plt.figure()
 
     # wcs = WCS(self.getWCS())
-    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS())
+    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS(original=original))
     fig.add_axes(ax)
 
     # Now with an other colormap and in logscale
@@ -146,7 +171,80 @@ class Image:
     # img.set_clim(1.1*np.min(image_data), np.max(image_data))
     cb.set_label('Counts')
 
+    if showCropped and self.cutout_data.size != 0:
+      self.cutout.plot_on_original(color=croppedBorder)
+
+    if self.labeled_starts is not None and showLabeledStars:
+      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle((star['x_pixels'], star['y_pixels']), labelCircleSize, color='b', fill=False)), axis=1)
+
     plt.show()
+
+  def zoomToPoint(self, x = None, y = None, ra = None, dec = None, zoom_size = 50, original = False, custom_vmin = None, custom_vmax = None, custom_cmap = 'grey', show_colorbar = True,
+                   setSaturatedToNan = False, use_log_norm = False):
+
+    """
+    Zooms into image around point
+    - (x, y) pixel coordinates or
+    - (ra, dec) world coordinates
+
+    - zoom_size = half-width of zoom-in window in pixels
+    - original = whether to zoom in from original image or already cropped image
+
+    """
+
+    data = self.getImageData(original)
+    wcs = self.getWCS(original)
+
+    if (setSaturatedToNan == True):
+      data = self.setSaturatedPixelsToNan(data)
+    print(np.nanmax(data))
+
+    if ra is not None and dec is not None:
+      x, y = wcs.all_world2pix(ra, dec, 0)
+
+    if x is None or y is None:
+      raise ValueError("Pixel coordinates (x, y) or world coordinates (ra, dec) must be provided")
+    
+    x, y = int(x), int(y)
+
+    # Defining zoom window size
+    x_start, x_end = max(0, x - zoom_size), min(x + zoom_size, data.shape[1])
+    y_start, y_end = max(0, y - zoom_size), min(y + zoom_size, data.shape[0])
+
+    #Extract zoom region
+    zoomed_data = data[y_start:y_end, x_start:x_end]
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    if (custom_vmin == None):
+      vmin = np.nanmin(data)
+    else:
+      vmin = custom_vmin
+    if (custom_vmax == None):
+      vmax = np.nanmax(data)
+    else:
+      vmax = custom_vmax
+
+    norm = None
+    if (use_log_norm == True):
+      norm = LogNorm(vmin=vmin, vmax=vmax)
+      img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, norm=norm)
+    else:
+      img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, vmin = vmin, vmax = vmax)
+
+    ax.scatter(x-x_start, y-y_start, color = 'red', marker = '+', label = "Zoom Center")
+    ax.set_xlim(0, x_end - x_start)
+    ax.set_ylim(0, y_end - y_start)
+    ax.set_title(f"Zoomed-in View (Center: x = {x}, y = {y})")
+    ax.set_xlabel("X Pixel")
+    ax.set_ylabel("Y Pixel")
+    ax.legend()
+
+    if (show_colorbar == True):
+      cbar = fig.colorbar(img, ax = ax, fraction = 0.05, pad = 0.04)
+      cbar.set_label("Pixel Intensity")
+
+    plt.show()
+    
 
   def getWCS(self, original=False):
     if original: return self.original_wcs
@@ -157,6 +255,17 @@ class Image:
     if original: return self.original_data
     elif self.cutout_data.size != 0: return self.cutout_data
     else: return self.original_data
+  
+  def getBounds(self):
+    """
+    Returns the coordinates at the bounds of the cropped image
+    """
+    data = self.getImageData()
+    ny, nx = data.shape  # Shape: rows (Y) x columns (X)
+
+    ra_min, dec_min = self.getWCS().all_pix2world(0, 0, 0)  # Bottom-left corner
+    ra_max, dec_max = self.getWCS().all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
+    return ra_min, dec_min, ra_max, dec_max
 
   @staticmethod
   def subtract(NB_image, BB_image, mu=1):
@@ -174,3 +283,8 @@ class Image:
     result.cutout_wcs = NB_image.getWCS()
 
     return result
+
+  def setLabeledStars(self, stars_filter):
+    self.labeled_starts = stars_filter.getVisibleStars()
+
+  # def applyContour(self, contour):
