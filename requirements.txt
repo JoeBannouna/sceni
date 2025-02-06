@@ -3,3 +3,4 @@ matplotlib
 astropy
 astroquery
 pandas
+scipy>=1.15.1
