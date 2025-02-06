@@ -71,18 +71,16 @@ class Image:
     Creates a cutout of the original image, to crop the currently cropped image pass `original=False`
     """
     data = self.getImageData(original)
-    
-    coords = np.argwhere(data)
-    row_min, col_min = coords.min(axis=0)
-    row_max, col_max = coords.max(axis=0)
+    ny, nx = data.shape
 
-    if x_start == None: x_start = col_min
-    if x_end == None: x_end = col_max
-    if y_start == None: y_start = row_min
-    if y_end == None: y_end = row_max
+    if x_start == None: x_start = 0
+    if x_end == None: x_end = nx
+    if y_start == None: y_start = 0
+    if y_end == None: y_end = ny
     
-    if x_end < 0: x_end = col_max + x_end
-    if y_end < 0: y_end = row_max + y_end
+    if x_end < 0: x_end = nx + x_end
+    if y_end < 0: y_end = ny + y_end
+    
 
     position = ((x_start+x_end)/2, (y_start+y_end)/2)
     size = (y_end-y_start, x_end-x_start)
