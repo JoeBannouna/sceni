@@ -46,10 +46,25 @@ class MuFinder:
     def setMuRangeAuto(self):
         """
         Sets the range of scale factors automatically.
+
         """
 
-        # INSERT CODE TO FIND THE BEST RANGE HERE
+        narrow_data = self.narrow_band_image.getImageData()
+        broad_data = self.broad_band_image.getImageData()
 
+        # Safeguard to make sure not dividing by 0
+        epsilon = 1e-6
+        valid_pixels = broad_data > epsilon
+
+        # Determining the rough ratio of the two images, obtaining median mu
+        pixel_ratios = narrow_data[valid_pixels] / (broad_data[valid_pixels] + epsilon)
+        median_mu = np.median(pixel_ratios)
+
+        # Based on rough median_mu, choosing large enough range
+        start = max(0.1, 0.5 * median_mu)
+        end = (2 * median_mu)
+
+        self.mu_range = (start, end)
         self.mu_linspace = np.linspace(start, end, int((end - start)/self.mu_resolution))
         self.is_paramaters_changed = True   # Flag that the parameters have changes
 
