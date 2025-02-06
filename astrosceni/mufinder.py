@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from astrosceni.image import Image
+from scipy.interpolate import make_splrep, PPoly
+from scipy.stats import skew
 
 class MuFinder:
     def __init__(self, narrow_band_image, broad_band_image, mu_range=None, mu_resolution=0.1):
@@ -54,22 +56,29 @@ class MuFinder:
     def getSkewnessVals(self):
         if (self.is_paramaters_changed):
             self.skewness_vals = []
+            narrow_data = self.narrow_band_image.getImageData().flatten()
+            broad_data = self.broad_band_image.getImageData().flatten()
+
             for mu in self.mu_linspace:
-                data = (self.narrow_band_image.getImageData() - mu*self.broad_band_image.getImageData()).flatten()
-                self.skewness_vals.append(np.sum(((data - np.mean(data)) / np.std(data, ddof=1)) ** 3) / (len(data) - 1))
+                data = narrow_data - mu * broad_data  # Element-wise operation
+                skew_val = skew(data, bias=False)
+                self.skewness_vals.append(skew_val)
         self.is_paramaters_changed = False
         return self.skewness_vals
 
     def plotSkewnessVals(self):
         plt.xlabel('$^\mu$')
         plt.ylabel('s($^\mu$)')
-        plt.plot(self.factors, self.getSkewnessVals())
+        plt.plot(self.mu_linspace, self.getSkewnessVals())
 
-    def getOptimalMu(self):
+    def getOptimalMus(self):
         skews = self.getSkewnessVals()
-        # BSPLINE CODE
-        return 0.2
+        roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots()
+        return roots[roots < self.mu_range[1] and roots > self.mu_range[0]]
 
-    def getResultImage(self):
-        optimal_mu = self.getOptimalMu()
-        return Image.subtract(self.narrow_band_image, self.broad_band_image, optimal_mu)
+    def getResultImages(self):
+        optimal_mus = self.getOptimalMus()
+        images = []
+        for mu in optimal_mus:
+            images.append(Image.subtract(self.narrow_band_image, self.broad_band_image, mu))
+        return images
