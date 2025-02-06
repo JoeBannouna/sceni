@@ -5,9 +5,11 @@ import astropy.units as u
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.wcs import WCS
+from astropy.visualization import simple_norm
 from astropy.visualization.wcsaxes import WCSAxes
 from matplotlib.colors import LogNorm, SymLogNorm
 from astropy.nddata import Cutout2D
+from scipy.ndimage import gaussian_filter
 import os, warnings
 
 #Simplifies warning message
@@ -29,15 +31,13 @@ class Image:
     if (path != None): self.load(path)
 
   #Determines how many saturated pixels are in image, compares as ratio to resolution and provides warning if necessary
-  def checkSaturatedPixelCount(self, saturatedRatioLim):
-    count = np.sum(self.original_data > (2**15)-2)
-    print("Count of saturated pixels: ", count)
-    resolution = len(self.original_data) * len(self.original_data[0])
-    print("Total image pixel count: ", resolution)
+  def checkSaturatedPixelCount(self, saturated_ratio_lim, saturation_threshold):
 
+    count = np.sum(self.original_data >= saturation_threshold)
+    resolution = len(self.original_data) * len(self.original_data[0])
     ratio = count/resolution
 
-    if (ratio >= saturatedRatioLim):
+    if (ratio >= saturated_ratio_lim):
       warnings.warn("WARNING: Saturated pixels account for %.2f%% of total pixel count of image" % (100*ratio))
 
   def setSaturatedPixelsToNan(self, data):
@@ -45,7 +45,7 @@ class Image:
     return data
     
 
-  def load(self, path, saturatedRatioLim = 0.001):
+  def load(self, path, saturated_ratio_lim = 0.001, saturation_threshold = 2**15-1):
     """
     Loads the image data and headers from a fits file
     """
@@ -54,8 +54,8 @@ class Image:
     hdu = fits.open(filename)
     
     self.original_data = hdu[0].data
-    self.checkSaturatedPixelCount(saturatedRatioLim)
     self.original_header = hdu[0].header
+    self.checkSaturatedPixelCount(saturated_ratio_lim, saturation_threshold)
 
     # Initialize WCS object from the FITS header
     self.original_wcs = WCS(self.original_header)
@@ -289,8 +289,31 @@ class Image:
   def setLabeledStars(self, stars_filter):
     self.labeled_starts = stars_filter.getVisibleStars()
 
-  # def applyContour(self, contour):
+  def plotContour(self, sigma = None, levels = 5, cmap = 'viridis', norm_type = 'linear', base_cmap = 'gray', overlay = False, alpha = 0.5):
+    data = self.getImageData()
+    
+    if np.all(data) == None:
+      raise ValueError("No image loaded")
 
+    if sigma is not None:
+      data = gaussian_filter(data, sigma = sigma)
+
+    norm = simple_norm(data, norm_type)
+
+    plt.figure(figsize=(10, 8))
+
+    if overlay:
+      plt.imshow(norm(data), origin = 'lower', cmap = base_cmap, alpha = alpha)
+
+    contour = plt.contour(norm(data), levels = levels, cmap = cmap)
+    cbar = plt.colorbar(contour)
+    cbar.set_label("Intensity")
+
+    plt.title("Contour plot")
+    plt.xlabel("X-Axis")
+    plt.ylabel("Y-Axis") 
+    plt.show()
+  
   def plotHist(self, nbins=200):
     # flatten means: we put our 2d array in a 1d array
     histogram = plt.hist(self.getImageData().flatten(), nbins)
@@ -298,4 +321,3 @@ class Image:
     plt.xlabel('Pixel Content')
     plt.ylabel('Number of Pixels')
     plt.yscale('log')
-    plt.show()
