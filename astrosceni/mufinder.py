@@ -74,7 +74,9 @@ class MuFinder:
     def getOptimalMus(self):
         skews = self.getSkewnessVals()
         roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots()
-        return roots[roots < self.mu_range[1] and roots > self.mu_range[0]]
+        roots = roots[roots < self.mu_range[1]]
+        roots = roots[roots > self.mu_range[0]]
+        return roots
 
     def getResultImages(self):
         optimal_mus = self.getOptimalMus()
