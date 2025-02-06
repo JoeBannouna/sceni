@@ -47,13 +47,11 @@ class StarsFilter:
         file_name = catalogue_id.replace("/", "_") + ".csv"
         target_folder = self.data_directory_path
         file_path = f"{target_folder}/{file_name}"
-        print(file_path)
 
         if (os.path.isfile(file_path)):
             #Previous file generated was found, extracting dataframe
             print("Previous saved catalog file found.")
             catalog_df = pd.read_csv(file_path)
-            print(catalog_df)
         else:
             #Previous file generated wasn't found, saving a new file with dataframe
             print("Previous saved catalog file not found")
@@ -65,7 +63,6 @@ class StarsFilter:
             catalog_df = catalog_data.to_pandas()
 
             catalog_df = catalog_df.rename(columns={ra_col_name: "RA", dec_col_name: "DEC"})
-            print(catalog_df)
 
             #Unless user doesnt specify, download catalogue to file
             if download_catalogue == True:
@@ -154,11 +151,6 @@ class StarsFilter:
             self.dec_min = min(decCorners)
             self.dec_max = max(decCorners)
 
-            print(SkyCoord(ra=self.ra_min, dec=self.dec_min, unit = 'deg').to_string(style = "hmsdms"))
-            print(SkyCoord(ra=self.ra_min, dec=self.dec_max, unit = 'deg').to_string(style = "hmsdms"))
-            print(SkyCoord(ra=self.ra_max, dec=self.dec_min, unit = 'deg').to_string(style = "hmsdms"))
-            print(SkyCoord(ra=self.ra_max, dec=self.dec_max, unit = 'deg').to_string(style = "hmsdms"))
-
         #Create a copy of the catalog DF where the only stars remaining are those that are within the bounds set by the image
         catalog_df = catalog_df[(catalog_df["RA"] >= self.ra_min) &
                                 (catalog_df["RA"] <= self.ra_max) &
@@ -167,8 +159,6 @@ class StarsFilter:
 
         #Save the coordinates of the filtered catalog and their unit (degrees) within a SkyCoord object
         star_coords = SkyCoord(ra = catalog_df["RA"], dec = catalog_df["DEC"], unit = 'deg')
-        
-        print(star_coords.to_string(style = 'hmsdms'))
 
         #create 2 pixel arrays with pixels corresponding to star positions on the image
         x_pixels, y_pixels = skycoord_to_pixel(star_coords, image.getWCS())
@@ -177,14 +167,6 @@ class StarsFilter:
         catalog_df['x_pixels'] = x_pixels
         catalog_df['y_pixels'] = y_pixels
 
-        print(catalog_df)
-
-        #Remove stars outside of bounds of image
-        # catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0) &
-        #                         (catalog_df['x_pixels'] <= hdu.shape[1]) &
-        #                         (catalog_df['y_pixels'] >= 0) &
-        #                         (catalog_df['y_pixels'] <= hdu.shape[0])]
-        
         catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0)]
         catalog_df = catalog_df[(catalog_df['x_pixels'] <= hdu.shape[1])]
         catalog_df = catalog_df[(catalog_df['y_pixels'] >= 0)]
