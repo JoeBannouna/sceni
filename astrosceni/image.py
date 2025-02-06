@@ -282,19 +282,10 @@ class Image:
 
   @staticmethod
   def subtract(NB_image, BB_image, mu=1):
+    if NB_image.getImageData().shape != BB_image.getImageData().shape: raise ValueError('Images must be the same size')
+
     result = copy.deepcopy(NB_image)
-    
-    nbdata = np.array([])
-    if NB_image.cutout != None: nbdata = NB_image.cutout_data
-    else: nbdata = NB_image.original_data
-
-    bbdata = np.array([])
-    if BB_image.cutout != None: bbdata = BB_image.cutout_data
-    else: bbdata = BB_image.original_data
-
-    result.cutout_data = nbdata - mu*bbdata
-    result.cutout_wcs = NB_image.getWCS()
-
+    result.setImageData(NB_image.getImageData() - mu*BB_image.getImageData())
     return result
 
   def setLabeledStars(self, stars_filter):

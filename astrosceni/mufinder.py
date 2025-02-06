@@ -21,6 +21,7 @@ class MuFinder:
             self.setMuRangeAuto()
         else:
             divisions = int((self.mu_range[1] - self.mu_range[0])/self.mu_resolution)
+            print(divisions)
             self.mu_linspace = np.linspace(self.mu_range[0], self.mu_range[1], divisions)
 
     def setMuResolution(self, mu_resolution):
@@ -56,6 +57,7 @@ class MuFinder:
             for mu in self.mu_linspace:
                 data = (self.narrow_band_image.getImageData() - mu*self.broad_band_image.getImageData()).flatten()
                 self.skewness_vals.append(np.sum(((data - np.mean(data)) / np.std(data, ddof=1)) ** 3) / (len(data) - 1))
+        self.is_paramaters_changed = False
         return self.skewness_vals
 
     def plotSkewnessVals(self):
@@ -66,6 +68,7 @@ class MuFinder:
     def getOptimalMu(self):
         skews = self.getSkewnessVals()
         # BSPLINE CODE
+        return 0.2
 
     def getResultImage(self):
         optimal_mu = self.getOptimalMu()
