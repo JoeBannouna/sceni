@@ -71,18 +71,16 @@ class Image:
     Creates a cutout of the original image, to crop the currently cropped image pass `original=False`
     """
     data = self.getImageData(original)
-    
-    coords = np.argwhere(data)
-    row_min, col_min = coords.min(axis=0)
-    row_max, col_max = coords.max(axis=0)
+    ny, nx = data.shape
 
-    if x_start == None: x_start = col_min
-    if x_end == None: x_end = col_max
-    if y_start == None: y_start = row_min
-    if y_end == None: y_end = row_max
+    if x_start == None: x_start = 0
+    if x_end == None: x_end = nx
+    if y_start == None: y_start = 0
+    if y_end == None: y_end = ny
     
-    if x_end < 0: x_end = col_max + x_end
-    if y_end < 0: y_end = row_max + y_end
+    if x_end < 0: x_end = nx + x_end
+    if y_end < 0: y_end = ny + y_end
+    
 
     position = ((x_start+x_end)/2, (y_start+y_end)/2)
     size = (y_end-y_start, x_end-x_start)
@@ -249,12 +247,25 @@ class Image:
   def getWCS(self, original=False):
     if original: return self.original_wcs
     elif self.cutout_data.size != 0: return self.cutout_wcs
-    return self.original_wcs
+    else: return self.original_wcs
+    
+  def setWCS(self, wcs, original=False):
+    if original: self.original_wcs = wcs
+    elif self.cutout_data.size != 0: self.cutout_wcs = wcs
+    else: self.original_wcs = wcs
   
   def getImageData(self, original=False):
     if original: return self.original_data
     elif self.cutout_data.size != 0: return self.cutout_data
     else: return self.original_data
+  
+  def setImageData(self, data, original=False):
+    """
+    When calling this function its important to remember that WCS is invalid unless setWCS is called along with this function to ensure the data is coherent
+    """
+    if original: self.original_data = data
+    elif self.cutout_data.size != 0: self.cutout_data = data
+    else: self.original_data = data
   
   def getBounds(self):
     """
@@ -269,19 +280,10 @@ class Image:
 
   @staticmethod
   def subtract(NB_image, BB_image, mu=1):
+    if NB_image.getImageData().shape != BB_image.getImageData().shape: raise ValueError('Images must be the same size')
+
     result = copy.deepcopy(NB_image)
-    
-    nbdata = np.array([])
-    if NB_image.cutout != None: nbdata = NB_image.cutout_data
-    else: nbdata = NB_image.original_data
-
-    bbdata = np.array([])
-    if BB_image.cutout != None: bbdata = BB_image.cutout_data
-    else: bbdata = BB_image.original_data
-
-    result.cutout_data = nbdata - mu*bbdata
-    result.cutout_wcs = NB_image.getWCS()
-
+    result.setImageData(NB_image.getImageData() - mu*BB_image.getImageData())
     return result
 
   def setLabeledStars(self, stars_filter):
@@ -311,3 +313,11 @@ class Image:
     plt.xlabel("X-Axis")
     plt.ylabel("Y-Axis") 
     plt.show()
+  
+  def plotHist(self, nbins=200):
+    # flatten means: we put our 2d array in a 1d array
+    histogram = plt.hist(self.getImageData().flatten(), nbins)
+
+    plt.xlabel('Pixel Content')
+    plt.ylabel('Number of Pixels')
+    plt.yscale('log')
