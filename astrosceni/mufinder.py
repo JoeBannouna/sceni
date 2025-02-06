@@ -55,7 +55,7 @@ class MuFinder:
             self.skewness_vals = []
             for mu in self.mu_linspace:
                 data = (self.narrow_band_image.getImageData() - mu*self.broad_band_image.getImageData()).flatten()
-                self.skews.append(np.sum(((data - np.mean(data)) / np.std(data, ddof=1)) ** 3) / (len(data) - 1))
+                self.skewness_vals.append(np.sum(((data - np.mean(data)) / np.std(data, ddof=1)) ** 3) / (len(data) - 1))
         return self.skewness_vals
 
     def plotSkewnessVals(self):
