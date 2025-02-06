@@ -31,21 +31,24 @@ class Image:
     if (path != None): self.load(path)
 
   #Determines how many saturated pixels are in image, compares as ratio to resolution and provides warning if necessary
-  def checkSaturatedPixelCount(self, saturated_ratio_lim, saturation_threshold):
-
-    count = np.sum(self.original_data >= saturation_threshold)
-    resolution = len(self.original_data) * len(self.original_data[0])
+  def checkSaturatedPixelCount(self, saturated_ratio_lim, saturation_threshold=None):
+    if saturation_threshold == None: saturation_threshold = np.max(self.getImageData())
+    count = np.sum(self.getImageData() >= saturation_threshold)
+    resolution = len(self.getImageData()) * len(self.getImageData()[0])
     ratio = count/resolution
 
     if (ratio >= saturated_ratio_lim):
       warnings.warn("WARNING: Saturated pixels account for %.2f%% of total pixel count of image" % (100*ratio))
+    return count
 
-  def setSaturatedPixelsToNan(self, data):
-    data[data > (2**15)-2] = np.nan
-    return data
+  def setSaturatedPixelsToNan(self, saturation_threshold=None):
+    if saturation_threshold == None: saturation_threshold = np.max(self.getImageData())
+    data = self.getImageData()
+    data[data >= saturation_threshold] = np.nan
+    self.setImageData(data)
     
 
-  def load(self, path, saturated_ratio_lim = 0.001, saturation_threshold = 2**15-1):
+  def load(self, path, saturated_ratio_lim = 0.001):
     """
     Loads the image data and headers from a fits file
     """
@@ -55,16 +58,10 @@ class Image:
     
     self.original_data = hdu[0].data
     self.original_header = hdu[0].header
-    self.checkSaturatedPixelCount(saturated_ratio_lim, saturation_threshold)
+    self.checkSaturatedPixelCount(saturated_ratio_lim)
 
     # Initialize WCS object from the FITS header
     self.original_wcs = WCS(self.original_header)
-
-  def _printData(self, original=False):
-    """
-    Prints the pixel values of the cropped image, for original image pass `original=True`
-    """
-    print(self.getImageData(original))
 
   def cropPixels(self, x_start=None, x_end=None, y_start=None, y_end=None, original=True):
     """
@@ -144,10 +141,11 @@ class Image:
     if isinstance(dec, str): return SkyCoord(ra="00h", dec=dec, unit=(u.hourangle, u.deg)).dec.deg
     return dec
 
-  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=True, labelCircleSize=10):
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
     """
+    if showCropped: original = True
     data = self.getImageData(original)
     
     fig = plt.figure()
@@ -170,10 +168,11 @@ class Image:
     cb.set_label('Counts')
 
     if showCropped and self.cutout_data.size != 0:
+      print(self.cutout_data.size)
       self.cutout.plot_on_original(color=croppedBorder)
 
     if self.labeled_starts is not None and showLabeledStars:
-      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle((star['x_pixels'], star['y_pixels']), labelCircleSize, color='b', fill=False)), axis=1)
+      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle(SkyCoord(star['RA'], star['DEC'], unit='deg').to_pixel(self.original_wcs if original else self.getWCS()), labelCircleSize, color='b', fill=False)), axis=1)
 
     plt.show()
 
