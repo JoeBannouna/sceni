@@ -19,7 +19,7 @@ warnings.formatwarning = lambda message, *args: f"{message}\n"
 class StarsFilter:
 
     #Initializes class
-    def __init__ (self):
+    def __init__ (self, data_directory_path = 'data'):
         self.original_catalog_df = None
         self.stars_in_region_df = None
         self.stars_visible_df = None
@@ -28,9 +28,11 @@ class StarsFilter:
         self.custom_region = False
         self.catalogue_set = False
 
+        self.data_directory_path = data_directory_path
+
     #Sets star catalogue
     #Uses hipparcos catalogue by default, can set catalogue id, and if custom catalogie user must input RA, Dec and apparent magnitude column names
-    def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag", ):
+    def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag"):
 
         #Check if given values are strings
         if (not isinstance(catalogue_id, str)) or (not isinstance(ra_col_name, str)) or (not isinstance(dec_col_name, str)) or (not isinstance(app_mag_col_name, str)):
@@ -43,13 +45,15 @@ class StarsFilter:
 
         #Designate a file path
         file_name = catalogue_id.replace("/", "_") + ".csv"
-        target_folder = "data"
+        target_folder = self.data_directory_path
         file_path = f"{target_folder}/{file_name}"
+        print(file_path)
 
         if (os.path.isfile(file_path)):
             #Previous file generated was found, extracting dataframe
             print("Previous saved catalog file found.")
             catalog_df = pd.read_csv(file_path)
+            print(catalog_df)
         else:
             #Previous file generated wasn't found, saving a new file with dataframe
             print("Previous saved catalog file not found")
@@ -59,6 +63,9 @@ class StarsFilter:
             vizier.ROW_LIMIT = -1
             catalog_data = vizier.get_catalogs(catalogue_id)[0]
             catalog_df = catalog_data.to_pandas()
+
+            catalog_df = catalog_df.rename(columns={ra_col_name: "RA", dec_col_name: "DEC"})
+            print(catalog_df)
 
             #Unless user doesnt specify, download catalogue to file
             if download_catalogue == True:
@@ -147,15 +154,22 @@ class StarsFilter:
             self.dec_min = min(decCorners)
             self.dec_max = max(decCorners)
 
+            print(SkyCoord(ra=self.ra_min, dec=self.dec_min, unit = 'deg').to_string(style = "hmsdms"))
+            print(SkyCoord(ra=self.ra_min, dec=self.dec_max, unit = 'deg').to_string(style = "hmsdms"))
+            print(SkyCoord(ra=self.ra_max, dec=self.dec_min, unit = 'deg').to_string(style = "hmsdms"))
+            print(SkyCoord(ra=self.ra_max, dec=self.dec_max, unit = 'deg').to_string(style = "hmsdms"))
+
         #Create a copy of the catalog DF where the only stars remaining are those that are within the bounds set by the image
-        catalog_df = catalog_df[(catalog_df[self.ra_col_name] >= self.ra_min) &
-                                (catalog_df[self.ra_col_name] <= self.ra_max) &
-                                (catalog_df[self.dec_col_name] >= self.dec_min) &
-                                (catalog_df[self.dec_col_name] <= self.dec_max)]
+        catalog_df = catalog_df[(catalog_df["RA"] >= self.ra_min) &
+                                (catalog_df["RA"] <= self.ra_max) &
+                                (catalog_df["DEC"] >= self.dec_min) &
+                                (catalog_df["DEC"] <= self.dec_max)]
 
         #Save the coordinates of the filtered catalog and their unit (degrees) within a SkyCoord object
-        star_coords = SkyCoord(ra = catalog_df[self.ra_col_name], dec = catalog_df[self.dec_col_name], unit = 'deg')
+        star_coords = SkyCoord(ra = catalog_df["RA"], dec = catalog_df["DEC"], unit = 'deg')
         
+        print(star_coords.to_string(style = 'hmsdms'))
+
         #create 2 pixel arrays with pixels corresponding to star positions on the image
         x_pixels, y_pixels = skycoord_to_pixel(star_coords, image.getWCS())
 
@@ -163,14 +177,19 @@ class StarsFilter:
         catalog_df['x_pixels'] = x_pixels
         catalog_df['y_pixels'] = y_pixels
 
-        hdu_data = np.array(hdu.data)
+        print(catalog_df)
 
         #Remove stars outside of bounds of image
-        catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0) &
-                                (catalog_df['x_pixels'] <= hdu.shape[1]) &
-                                (catalog_df['y_pixels'] >= 0) &
-                                (catalog_df['y_pixels'] <= hdu.shape[0])]
+        # catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0) &
+        #                         (catalog_df['x_pixels'] <= hdu.shape[1]) &
+        #                         (catalog_df['y_pixels'] >= 0) &
+        #                         (catalog_df['y_pixels'] <= hdu.shape[0])]
         
+        catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0)]
+        catalog_df = catalog_df[(catalog_df['x_pixels'] <= hdu.shape[1])]
+        catalog_df = catalog_df[(catalog_df['y_pixels'] >= 0)]
+        catalog_df = catalog_df[(catalog_df['y_pixels'] <= hdu.shape[0])]
+
         #Check if apparent magnitude was set by user, and if so further filter stars according to the limits given
         if (self.mag_min != None):
                 catalog_df = catalog_df[(catalog_df[self.app_mag_col_name] >= self.mag_min)]
