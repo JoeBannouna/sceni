@@ -194,7 +194,6 @@ class Image:
 
     if (setSaturatedToNan == True):
       data = self.setSaturatedPixelsToNan(data)
-    print(np.nanmax(data))
 
     if ra is not None and dec is not None:
       x, y = wcs.all_world2pix(ra, dec, 0)
@@ -273,9 +272,12 @@ class Image:
     data = self.getImageData()
     ny, nx = data.shape  # Shape: rows (Y) x columns (X)
 
-    ra_min, dec_min = self.getWCS().all_pix2world(0, 0, 0)  # Bottom-left corner
-    ra_max, dec_max = self.getWCS().all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
-    return ra_min, dec_min, ra_max, dec_max
+    ra_bl, dec_bl = self.getWCS().all_pix2world(0, 0, 0)  # Bottom-left corner
+    ra_br, dec_br = self.getWCS().all_pix2world(nx - 1, 0, 0)  # Bottom-right corner
+    ra_tl, dec_tl = self.getWCS().all_pix2world(0, ny - 1, 0)  # Top-left corner
+    ra_tr, dec_tr = self.getWCS().all_pix2world(nx - 1, ny - 1, 0)  # Top-right corner
+    
+    return SkyCoord(ra=ra_bl, dec=dec_bl, unit='deg'), SkyCoord(ra=ra_br, dec=dec_br, unit='deg'), SkyCoord(ra=ra_tl, dec=dec_tl, unit='deg'), SkyCoord(ra=ra_tr, dec=dec_tr, unit='deg')
 
   @staticmethod
   def subtract(NB_image, BB_image, mu=1):
