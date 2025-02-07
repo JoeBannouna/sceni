@@ -30,10 +30,11 @@ class StarsFilter:
 
         self.data_directory_path = data_directory_path
 
-    #Sets star catalogue
-    #Uses hipparcos catalogue by default, can set catalogue id, and if custom catalogie user must input RA, Dec and apparent magnitude column names
     def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag"):
-
+        """
+        Sets star catalogue desired, and by default saves copy of important star properties (Ra, Dec and Vmag of stars)
+        Uses hipparcos catalogue by default
+        """
         #Check if given values are strings
         if (not isinstance(catalogue_id, str)) or (not isinstance(ra_col_name, str)) or (not isinstance(dec_col_name, str)) or (not isinstance(app_mag_col_name, str)):
             raise TypeError("Value must be a string.")
@@ -49,20 +50,20 @@ class StarsFilter:
         file_path = f"{target_folder}/{file_name}"
 
         if (os.path.isfile(file_path)):
-            #Previous file generated was found, extracting dataframe
             print("Previous saved catalog file found.")
             catalog_df = pd.read_csv(file_path)
         else:
-            #Previous file generated wasn't found, saving a new file with dataframe
             print("Previous saved catalog file not found")
+            print("Downloading new copy")
 
             #Obtain catalog using astroquery utilising the catalog ID
             vizier = Vizier(columns = [ra_col_name, dec_col_name, app_mag_col_name])
             vizier.ROW_LIMIT = -1
             catalog_data = vizier.get_catalogs(catalogue_id)[0]
             catalog_df = catalog_data.to_pandas()
+            print(catalog_df.columns)
 
-            catalog_df = catalog_df.rename(columns={ra_col_name: "RA", dec_col_name: "DEC"})
+            catalog_df = catalog_df.rename(columns={catalog_df.columns[0]: "RA", catalog_df.columns[1]: "DEC", catalog_df.columns[2]: "Vmag"})
 
             #Unless user doesnt specify, download catalogue to file
             if download_catalogue == True:
@@ -81,7 +82,9 @@ class StarsFilter:
     
     #Defines region in right ascension and declination
     def setRegion(self, ra_min, ra_max, dec_min, dec_max):
-
+        """
+        Defines region in right ascension and declination
+        """
         #If region arguments are not floats, returns type error
         if (not isinstance(ra_min, float)) or (not isinstance(ra_max, float)) or (not isinstance(dec_min, float)) or (not isinstance(dec_max, float)):
             raise TypeError("Value must be a float.")
@@ -104,7 +107,7 @@ class StarsFilter:
     
     #Returns apparent magnitude limits
     def getMagLimit(self):
-        return self.app_mag_min, self.app_mag_max
+        return self.mag_min, self.mag_max
     
     #Sets limits for periods of stars found
     def setPeriodicityLimit(self, period_min, period_max):
@@ -115,16 +118,22 @@ class StarsFilter:
     def getPeriodicityLimit(self):
         return self.period_min, self.period_max
 
-    #Generates a list of stars which are within the given image and that are "visible"
     def setStarsInRegion(self, image):
+        """
+        Generates dataframe of stars which are within given image using header information
+        Dataframe Layout:
+        Star Identifier #       RA      DEC     Vmag        x_pixels        y_pixels
+        ...                     ...     ...     ...         ...             ...     
+        """
+
         #Checks if image passed is an image object
         if (not isinstance(image, Image)):
             raise TypeError("Parameter must be an image object")
         
-        #Checks that hdu from image isn't none
-        hdu = image.getImageData(original = False)
-        if (hdu is None):
-            raise ValueError("hdu has datatype None")
+        #Checks that data from image isn't none
+        data = image.getImageData(original = False)
+        if (data is None):
+            raise ValueError("data has datatype None")
 
         #If no catalogue currently loaded into program, use default catalogue, hipparcos
         if (self.original_catalog_df is None):
@@ -139,9 +148,9 @@ class StarsFilter:
             #Define the corners of the image
             corners = [
                 (0, 0),                         # Bottom-left
-                (hdu.shape[1], 0),              # Bottom-right
-                (0, hdu.shape[0]),              # Top-left
-                (hdu.shape[1], hdu.shape[0])    # Top-right
+                (data.shape[1], 0),              # Bottom-right
+                (0, data.shape[0]),              # Top-left
+                (data.shape[1], data.shape[0])    # Top-right
             ]
 
             #Decide the Ra and Dec range of the image
@@ -168,32 +177,34 @@ class StarsFilter:
         catalog_df['y_pixels'] = y_pixels
 
         catalog_df = catalog_df[(catalog_df['x_pixels'] >= 0)]
-        catalog_df = catalog_df[(catalog_df['x_pixels'] <= hdu.shape[1])]
+        catalog_df = catalog_df[(catalog_df['x_pixels'] <= data.shape[1])]
         catalog_df = catalog_df[(catalog_df['y_pixels'] >= 0)]
-        catalog_df = catalog_df[(catalog_df['y_pixels'] <= hdu.shape[0])]
+        catalog_df = catalog_df[(catalog_df['y_pixels'] <= data.shape[0])]
 
         #Check if apparent magnitude was set by user, and if so further filter stars according to the limits given
         if (self.mag_min != None):
-                catalog_df = catalog_df[(catalog_df[self.app_mag_col_name] >= self.mag_min)]
+                catalog_df = catalog_df[(catalog_df["Vmag"] >= self.mag_min)]
         if (self.mag_max != None):
-                catalog_df = catalog_df[(catalog_df[self.app_mag_col_name] <= self.mag_max)]
+                catalog_df = catalog_df[(catalog_df["Vmag"] <= self.mag_max)]
 
         self.stars_in_region_df = catalog_df
 
     def extractStarRegion(self, star_index, image, x_y_width):
-        # Extracts an n x n grid around the centre of a star for analysis
+        """
+        Extracts an n x n grid around the centre of a star for analysis
+        """
         star = self.stars_in_region_df.iloc[star_index]
         x, y = int(star['x_pixels']), int(star['y_pixels'])
-        hdu_data = image.getImageData()
+        data = image.getImageData()
 
         # Define the bounds of the region
         x_min = max(x - x_y_width, 0)
-        x_max = min(x + x_y_width, hdu_data.shape[1])
+        x_max = min(x + x_y_width, data.shape[1])
         y_min = max(y - x_y_width, 0)
-        y_max = min(y + x_y_width, hdu_data.shape[0])
+        y_max = min(y + x_y_width, data.shape[0])
 
         # Extract the region
-        region = hdu_data[y_min:y_max, x_min:x_max]
+        region = data[y_min:y_max, x_min:x_max]
 
         # Pad the region with NaN values if it extends beyond the image boundaries
         padded_region = np.full((2 * x_y_width, 2 * x_y_width), np.nan)
@@ -201,23 +212,30 @@ class StarsFilter:
 
         return padded_region
 
-    def plotHistOfStar(self, star_index, image1, image2):
-        #Plots a histogram of the star region, with both image 1 (NB) and image 2 (BB)
+    def plotHistOfStar(self, star_index, image1, image2, print_brightest_pixels = False):
+        """
+        Plots a histogram of the star region, with both image 1 (NB) and image 2 (BB)
+        """
         region1 = self.extractStarRegion(star_index, image1, 5)
         region2 = self.extractStarRegion(star_index, image2, 5)
 
-        print("IMAGE 1, Brightest pixel within range: ", region1.max())
-        print("IMAGE 2, Brightest pixel within range: ", region2.max())
+        if print_brightest_pixels == True:
+            print("IMAGE 1, Brightest pixel within range: ", np.nanmax(region1))
+            print("IMAGE 2, Brightest pixel within range: ", np.nanmax(region2))
     
-        plt.figure(figsize=(10, 6))
-        plt.hist(region1.ravel(), bins=30, alpha = 0.7, color = 'red', label = 'Pixel Values')
-        plt.hist(region2.ravel(), bins=30, alpha = 0.7, color = 'blue', label = 'Pixel Values')
+        plt.figure()
+        plt.hist(region1.ravel(), bins=30, alpha = 0.7, color = 'red', label = 'NB Pixel Values')
+        plt.hist(region2.ravel(), bins=30, alpha = 0.7, color = 'blue', label = 'BB Pixel Values')
+        plt.legend()
         plt.xlabel("Pixel Value")
         plt.ylabel("Frequency")
-        plt.title(f"Histogram of pixel values around star at index {star_index}")
+        plt.title(f"Histogram of pixel values around star with index {star_index}")
 
     def determineVisibilityOfIndividual(self, star_index, image, region_size=10, wiggleRoom = 2, threshold_amp = 500, reduced_chi_squared_bound = 2, print_results = False):
-        # Extracts star region (padded to 2*region_size x 2*region_size)
+        """
+        Determined whether a star is visible by if a gaussian can be fitted to it, and if the gaussian has a high enough amplitude and low enough reduced chi squared.
+        """
+
         region = self.extractStarRegion(star_index, image, region_size)
 
         # Check if the region is empty
@@ -297,18 +315,25 @@ class StarsFilter:
             print("Star is not considered visible, Amplitude is not greater than threshold amp and reduced_chi_squared is not less than 2")
         return False    # Star is not visible 
 
-    def setVisibleStars(self, image):
-        # Iterates through all stars in image and determines if they are visible
+    def setVisibleStars(self, image, print_results = False):
+        """
+        Iterates through all stars in image and determines if they are visible, saves new, shortened, dataframe
+        """
         visible_stars = []
         for i in range(len(self.stars_in_region_df)):
-            if self.determineVisibilityOfIndividual(i, image):
+            if self.determineVisibilityOfIndividual(i, image, print_results):
                 visible_stars.append(self.stars_in_region_df.iloc[i])
         self.stars_visible_df = pd.DataFrame(visible_stars)
 
     def removeVisibleStars(self, image, region_size = 10, annulus_width = 2):
+        """
+        Replaces visible stars with the estimated background level, size of which can be determined by user
+        """
         #Creates copy of image data
         new_image_data = image.getImageData().copy()
 
+        #Global background median
+        global_background_level = np.median(new_image_data)
         #Iterates through all visible stars in image and replaces them with background level
         for idx, star in self.stars_visible_df.iterrows():
             # Get stars pixel coordinates (already in dataframe)
@@ -344,9 +369,9 @@ class StarsFilter:
                 background_level = np.median(background_pixels)
             else:
                 # Fallback in case annulus is empty
-                background_level = np.median(new_image_data)
+                background_level = global_background_level
 
-            #Replace star region with abckground level
+            # Replace star region with abckground level
             new_image_data[y_min:y_max, x_min:x_max] = background_level
 
         image.original_data = new_image_data
@@ -363,11 +388,13 @@ class StarsFilter:
     
     #Simple usage, pass the image and will return array of data with visible stars removed
     def filterStars(self, image):
-
+        """
+        All encompassing function, acts as simple usage of class. Returns data of image with visible stars already removed, uses default parameters
+        """    
         #If no catalogue specifically chosen, fall back to hipparcus
         if self.catalogue_set == False:
             self.setCatalogue(download_catalogue = True)
-            self.catalogueSet = True
+            self.catalogue_set = True
 
         # Sets dataframe of stars in region
         self.setStarsInRegion(image)
