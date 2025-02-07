@@ -63,3 +63,7 @@ img.addContour('file.fits', color=None)
 
 img    # show image (use __repr__)
 ```
+
+## TODO
+- add scripts/ dir and inside a script to use the package and save the result image to a file from the command line
+- use this package https://click.palletsprojects.com/en/stable/quickstart/#examples

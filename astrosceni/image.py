@@ -145,7 +145,7 @@ class Image:
     if isinstance(dec, str): return SkyCoord(ra="00h", dec=dec, unit=(u.hourangle, u.deg)).dec.deg
     return dec
 
-  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, cmap='afmhot', mode='linear'):
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, labelCircleColor='b', cmap='afmhot', mode='linear'):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
     """
@@ -179,7 +179,7 @@ class Image:
       self.cutout.plot_on_original(color=croppedBorder)
 
     if self.labeled_starts is not None and showLabeledStars:
-      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle(SkyCoord(star['RA'], star['DEC'], unit='deg').to_pixel(self.original_wcs if original else self.getWCS()), labelCircleSize, color='b', fill=False)), axis=1)
+      self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle(SkyCoord(star['RA'], star['DEC'], unit='deg').to_pixel(self.original_wcs if original else self.getWCS()), labelCircleSize, color=labelCircleColor, fill=False)), axis=1)
 
     plt.show()
 
@@ -292,6 +292,8 @@ class Image:
 
     result = copy.deepcopy(NB_image)
     result.setImageData(NB_image.getImageData() - mu*BB_image.getImageData())
+    result.saturated_pixels_removed = True 
+    result.labeled_starts = None
     return result
 
   def setLabeledStars(self, stars_filter):
@@ -314,14 +316,14 @@ class Image:
 
     if overlay:
       plt.imshow(self.getImageData(), cmap = base_cmap, alpha = alpha, 
-                 vmin=np.nanpercentile(self.getImageData(), 5), 
-               vmax=np.nanpercentile(self.getImageData(), 99)
-               )
+        vmin=np.nanpercentile(self.getImageData(), 5), 
+        vmax=np.nanpercentile(self.getImageData(), 99)
+      )
 
     contour = plt.contour(data, levels = levels, cmap = cmap,
-               vmin=np.nanpercentile(self.getImageData(), 5), 
-               vmax=np.nanpercentile(self.getImageData(), 99)
-                          )
+      vmin=np.nanpercentile(self.getImageData(), 5), 
+      vmax=np.nanpercentile(self.getImageData(), 99)
+    )
     cbar = plt.colorbar(contour)
     cbar.set_label("Intensity")
 
