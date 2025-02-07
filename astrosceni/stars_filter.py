@@ -1,3 +1,4 @@
+import copy
 import os
 import warnings
 import numpy as np
@@ -315,13 +316,13 @@ class StarsFilter:
             print("Star is not considered visible, Amplitude is not greater than threshold amp and reduced_chi_squared is not less than 2")
         return False    # Star is not visible 
 
-    def setVisibleStars(self, image, print_results = False):
+    def setVisibleStars(self, image, print_results = False, region_size = 10, wiggleRoom = 2, threshold_amp = 500, reduced_chi_squared_bound = 2):
         """
         Iterates through all stars in image and determines if they are visible, saves new, shortened, dataframe
         """
         visible_stars = []
         for i in range(len(self.stars_in_region_df)):
-            if self.determineVisibilityOfIndividual(i, image, print_results):
+            if self.determineVisibilityOfIndividual(i, image, region_size, wiggleRoom, threshold_amp, reduced_chi_squared_bound, print_results):
                 visible_stars.append(self.stars_in_region_df.iloc[i])
         self.stars_visible_df = pd.DataFrame(visible_stars)
 
@@ -374,9 +375,10 @@ class StarsFilter:
             # Replace star region with abckground level
             new_image_data[y_min:y_max, x_min:x_max] = background_level
 
-        image.original_data = new_image_data
 
-        return image
+        result = copy.deepcopy(image)
+        result.setImageData(new_image_data)
+        return result
 
     #Returns the list of stars in region
     def getStarsInRegion(self):
