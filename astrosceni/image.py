@@ -24,6 +24,7 @@ class Image:
     self.original_header = None
     self.cutout = None
     self.cutout_data = np.array([])
+    self.saturated_pixels_removed = False
 
     self.original_wcs = None  # Store WCS object for conversion
     self.cutout_wcs = None  # Store WCS object for conversion
@@ -32,6 +33,8 @@ class Image:
 
   #Determines how many saturated pixels are in image, compares as ratio to resolution and provides warning if necessary
   def checkSaturatedPixelCount(self, saturated_ratio_lim, saturation_threshold=None):
+    if self.saturated_pixels_removed:
+      return 0
     if saturation_threshold == None: saturation_threshold = np.max(self.getImageData())
     count = np.sum(self.getImageData() >= saturation_threshold)
     resolution = len(self.getImageData()) * len(self.getImageData()[0])
@@ -42,11 +45,12 @@ class Image:
     return count
 
   def setSaturatedPixelsToNan(self, saturation_threshold=None):
+    if self.saturated_pixels_removed: return
     if saturation_threshold == None: saturation_threshold = np.max(self.getImageData())
     data = self.getImageData()
     data[data >= saturation_threshold] = np.nan
     self.setImageData(data)
-    
+    self.saturated_pixels_removed = True
 
   def load(self, path, saturated_ratio_lim = 0.001):
     """
@@ -141,7 +145,7 @@ class Image:
     if isinstance(dec, str): return SkyCoord(ra="00h", dec=dec, unit=(u.hourangle, u.deg)).dec.deg
     return dec
 
-  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10):
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, cmap='afmhot', mode='linear'):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
     """
@@ -155,7 +159,10 @@ class Image:
     fig.add_axes(ax)
 
     # Now with an other colormap and in logscale
-    img = ax.imshow(data, cmap='afmhot', norm=LogNorm())
+    img = ax.imshow(data, cmap=cmap, norm=None if mode != 'log' else LogNorm(), 
+                    vmin=None if mode != 'linear' else np.nanpercentile(self.getImageData(), 5), 
+                    vmax=None if mode != 'linear' else np.nanpercentile(self.getImageData(), 99)
+                    )
 
     ax.set_xlabel('RA')
     ax.set_ylabel('Dec')
@@ -301,12 +308,20 @@ class Image:
 
     norm = simple_norm(data, norm_type)
 
-    plt.figure(figsize=(10, 8))
+    fig = plt.figure()
+    ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS())
+    fig.add_axes(ax)
 
     if overlay:
-      plt.imshow(norm(data), origin = 'lower', cmap = base_cmap, alpha = alpha)
+      plt.imshow(self.getImageData(), cmap = base_cmap, alpha = alpha, 
+                 vmin=np.nanpercentile(self.getImageData(), 5), 
+               vmax=np.nanpercentile(self.getImageData(), 99)
+               )
 
-    contour = plt.contour(norm(data), levels = levels, cmap = cmap)
+    contour = plt.contour(data, levels = levels, cmap = cmap,
+               vmin=np.nanpercentile(self.getImageData(), 5), 
+               vmax=np.nanpercentile(self.getImageData(), 99)
+                          )
     cbar = plt.colorbar(contour)
     cbar.set_label("Intensity")
 
@@ -317,7 +332,7 @@ class Image:
   
   def plotHist(self, nbins=200):
     # flatten means: we put our 2d array in a 1d array
-    histogram = plt.hist(self.getImageData().flatten(), nbins)
+    plt.hist(self.getImageData().flatten(), nbins)
 
     plt.xlabel('Pixel Content')
     plt.ylabel('Number of Pixels')

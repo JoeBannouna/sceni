@@ -48,7 +48,6 @@ class MuFinder:
         Sets the range of scale factors automatically.
 
         """
-
         narrow_data = self.narrow_band_image.getImageData()
         broad_data = self.broad_band_image.getImageData()
 
@@ -58,13 +57,16 @@ class MuFinder:
 
         # Determining the rough ratio of the two images, obtaining median mu
         pixel_ratios = narrow_data[valid_pixels] / (broad_data[valid_pixels] + epsilon)
-        median_mu = np.median(pixel_ratios)
+        median_mu = np.nanmedian(pixel_ratios)
 
         # Based on rough median_mu, choosing large enough range
         start = max(0.1, 0.5 * median_mu)
         end = (2 * median_mu)
 
         self.mu_range = (start, end)
+        print(self.mu_range)
+        print(self.mu_resolution)
+        print(((end - start)/self.mu_resolution))
         self.mu_linspace = np.linspace(start, end, int((end - start)/self.mu_resolution))
         self.is_paramaters_changed = True   # Flag that the parameters have changes
 
@@ -73,6 +75,12 @@ class MuFinder:
             self.skewness_vals = []
             narrow_data = self.narrow_band_image.getImageData().flatten()
             broad_data = self.broad_band_image.getImageData().flatten()
+            
+            bad_data = np.isnan(narrow_data) | np.isnan(broad_data)
+            narrow_data = narrow_data[~bad_data]
+            # narrow_data = narrow_data[~np.isnan(broad_data)]
+            broad_data = broad_data[~bad_data]
+            # broad_data = broad_data[~np.isnan(narrow_data)]
 
             for mu in self.mu_linspace:
                 data = narrow_data - mu * broad_data  # Element-wise operation
@@ -88,6 +96,7 @@ class MuFinder:
 
     def getOptimalMus(self):
         skews = self.getSkewnessVals()
+        print(np.sum(np.isnan(skews)))
         roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots()
         roots = roots[roots < self.mu_range[1]]
         roots = roots[roots > self.mu_range[0]]
