@@ -20,45 +20,74 @@ from matplotlib import pyplot as plt
 def subtract(nb, bb, x_start, x_end, y_start, y_end, filter_stars, export):
     """ Program that performs nb - mu*bb, where nb and bb are narrowband and broadband images respectively and mu is some optimal scaling factor"""
     #Loads images
-    nb_img = Image(nb)
-    bb_img = Image(bb)
+    try:
+        nb_img = Image(nb)
+        bb_img = Image(bb)
+    except Exception as e:
+        click.echo(f"Error loading images: {e}")
+        raise click.Abort()
 
     #Crop Images
-    nb_img.cropPixels(x_start, x_end, y_start, y_end)
-    bb_img.cropPixels(x_start, x_end, y_start, y_end)
+    try:
+        nb_img.cropPixels(x_start, x_end, y_start, y_end)
+        bb_img.cropPixels(x_start, x_end, y_start, y_end)
+    except Exception as e:
+        click.echo(f"Error cropping images: {e}")
+        raise click.Abort()
 
-    #Saves images into MuFinder, gets optimal mu
-    mufinder = MuFinder(nb_img, bb_img, mu_resolution = 0.05)
+    #Initialize MuFinder with the cropped images
+    try:
+        mufinder = MuFinder(nb_img, bb_img, mu_resolution = 0.05)
+    except Exception as e:
+        click.echo(f"Error initializing MuFinder: {e}")
+        raise click.Abort()
+
     result_img = None
 
-    if not filter_stars:        
-        #Get Result images
-        images = mufinder.getResultImages()
+    # Compute result image with or without filtering stars
+    if not filter_stars: 
+        try:       
+            images = mufinder.getResultImages()
+            result_img = images[0]
+        except Exception as e:
+            click.echo(f"Error generating result images: {e}")
+            raise click.Abort()
 
-        #Plot result image
-        result_img = images[0]
-
-    # If filtering, get optimal mu, remove stars, and then subtract with already found mu
     else:
-        #Obtain optimal mus for images with stars
-        optimal_mus = mufinder.getOptimalMus()
+        #Obtain optimal mu values
+        try:
+            optimal_mus = mufinder.getOptimalMus()
+        except Exception as e:
+            click.echo(f"Error computing optimal mu values: {e}")
+            raise click.Abort()
 
-        #Remove visible stars from each image using hipparcus cataogue
-        starsFilter = StarsFilter()
+        # Filter stars from the images using the star filter
+        try:
+            starsFilter = StarsFilter()
+            # Uncomment line below to use bigger star catalogue
+            # starsFilter.setCatalogue(catalogue_id="I/259/tyc2", ra_col_name="RA(ICRS)", dec_col_name="DE(ICRS)", app_mag_col_name="VTmag")
+            filtered_nb = starsFilter.filterStars(nb_img)
+            filtered_bb = starsFilter.filterStars(bb_img)
+        except Exception as e:
+            click.echo(f"Error filtering stars: {e}")
+            raise click.Abort()
 
-        # Uncomment line below to use bigger star catalogue
-        # starsFilter.setCatalogue(catalogue_id="I/259/tyc2", ra_col_name="RA(ICRS)", dec_col_name="DE(ICRS)", app_mag_col_name="VTmag")
-        filtered_nb = starsFilter.filterStars(nb_img)
-        filtered_bb = starsFilter.filterStars(bb_img)
-
-        #Subtract filtered images with optimal mu from before
-        result_img = Image.subtract(filtered_nb, filtered_bb, optimal_mus[0])
+        #Subtract filtered images using optimal mu found earlier
+        try:
+            result_img = Image.subtract(filtered_nb, filtered_bb, optimal_mus[0])
+        except Exception as e:
+            click.echo(f"Error subtracting filtered images: {e}")
+            raise click.Abort()
 
     # If export path given, show plot and save to path
-    if export:
-        result_img.plot(export_path = export, cmap = 'viridis')
-    else:
-        result_img.plot(cmap = 'viridis') 
+    try:
+        if export:
+            result_img.plot(export_path = export, cmap = 'viridis')
+        else:
+            result_img.plot(cmap = 'viridis') 
+    except Exception as e:
+        click.echo(f"Error plotting image: {e}")
+        raise click.Abort()
                
 if __name__ == '__main__':
     subtract()
