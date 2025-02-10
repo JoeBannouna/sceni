@@ -212,7 +212,7 @@ class Image:
     return dec
 
 
-  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, labelCircleColor='b', cmap='afmhot', mode='linear'):
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, labelCircleColor='b', cmap='afmhot', mode='linear', export_path = None):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
 
@@ -250,6 +250,11 @@ class Image:
       Optional
       Default: 'b' (blue)
       Sets the color of the circle surrounding labelled stars.
+
+    export_path: string
+      Optional
+      Default: None
+      Sets the string to be where the plot is exported. Doesn't export if no string given
     """
     if showCropped: original = True
     data = self.getImageData(original)
@@ -282,6 +287,9 @@ class Image:
 
     if self.labeled_starts is not None and showLabeledStars:
       self.labeled_starts.apply(lambda star: ax.add_patch(plt.Circle(SkyCoord(star['RA'], star['DEC'], unit='deg').to_pixel(self.original_wcs if original else self.getWCS()), labelCircleSize, color=labelCircleColor, fill=False)), axis=1)
+
+    if export_path:
+      fig.savefig(export_path, bbox_inches = 'tight', pad_inches = 0.2)
 
     plt.show()
 
