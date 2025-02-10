@@ -15,6 +15,7 @@ import os, warnings
 #Simplifies warning message
 warnings.simplefilter('always', UserWarning)
 warnings.formatwarning = lambda message, *args: f"{message}\n"
+# Above 2 lines of warning generation code comes from the astropy library.
 
 class Image:
   def __init__(self, path=None):
@@ -119,7 +120,7 @@ class Image:
     dec_end = Image._convertDegDec(dec_end)
 
     # Convert RA/Dec to pixel coordinates using WCS
-    position = self.getWCS(original=original).all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0)
+    position = self.getWCS(original=original).all_world2pix((ra_end+ra_start)/2, (dec_end+dec_start)/2, 0) # The cutout array's center with respect to the data array
     position = (position[0], position[1])  # x, y in pixel coordinates
     pt1 = self.getWCS(original=original).all_world2pix(ra_start, dec_start, 0)
     pt2 = self.getWCS(original=original).all_world2pix(ra_end, dec_end, 0)
