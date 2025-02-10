@@ -44,7 +44,6 @@ class MuFinder:
             self.setMuRangeAuto()
         else:
             divisions = int((self.mu_range[1] - self.mu_range[0])/self.mu_resolution)
-            print(divisions)
             self.mu_linspace = np.linspace(self.mu_range[0], self.mu_range[1], divisions)
 
 
@@ -108,9 +107,6 @@ class MuFinder:
         end = (2 * median_mu)
 
         self.mu_range = (start, end)
-        print(self.mu_range)
-        print(self.mu_resolution)
-        print(((end - start)/self.mu_resolution))
         self.mu_linspace = np.linspace(start, end, int((end - start)/self.mu_resolution))
         self.is_paramaters_changed = True   # Flag that the parameters have changes
 
@@ -166,7 +162,6 @@ class MuFinder:
         # The smaller of the possible values is the truemal mu.
 
         skews = self.getSkewnessVals()
-        print(np.sum(np.isnan(skews)))
         roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots()
         roots = roots[roots < self.mu_range[1]]
         roots = roots[roots > self.mu_range[0]]
