@@ -399,7 +399,7 @@ class StarsFilter:
             print("IMAGE 2, Brightest pixel within range: ", np.nanmax(region2))
     
         plt.figure()
-        plt.hist(region1.ravel(), bins=30, alpha = 0.7, color = 'red', label = 'NB Pixel Values')
+        plt.hist(region1.ravel(), bins=30, alpha = 0.7, color = 'red', label = 'NB Pixel Values', range = (np.min([np.nanmin(region1), np.nanmin(region2)]), np.max([np.nanmax(region1), np.max(region2)])))
         plt.hist(region2.ravel(), bins=30, alpha = 0.7, color = 'blue', label = 'BB Pixel Values')
         plt.legend()
         plt.xlabel("Pixel Value")

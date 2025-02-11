@@ -435,7 +435,7 @@ class Image:
     else:
       img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, vmin = vmin, vmax = vmax)
 
-    ax.scatter(x-x_start, y-y_start, color = 'red', marker = '+', label = "Zoom Center")
+    ax.scatter(x_start, y_start, color = 'red', marker = '+', label = "Zoom Center")
     ax.set_xlim(0, x_end - x_start)
     ax.set_ylim(0, y_end - y_start)
     ax.set_title(f"Zoomed-in View (Center: x = {x}, y = {y})")

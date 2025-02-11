@@ -146,7 +146,8 @@ class MuFinder:
 
         plt.xlabel('$^\mu$')
         plt.ylabel('s($^\mu$)')
-        plt.plot(self.mu_linspace, self.getSkewnessVals())
+        plt.plot(self.mu_linspace, self.getSkewnessVals(), '.')
+
 
     def getOptimalMus(self):
         """
