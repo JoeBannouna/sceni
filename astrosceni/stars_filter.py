@@ -538,7 +538,7 @@ class StarsFilter:
             return True # Star is visible
         
         if print_results == True:
-            print(f"Star is not considered visible, amplitude is not greater than {threshold_amp} and reduced chi squared is not less than {reduced_chi_squared_bound}}")
+            print(f"Star is not considered visible, amplitude is not greater than {threshold_amp} and reduced chi squared is not less than {reduced_chi_squared_bound}")
         return False    # Star is not visible 
 
 
