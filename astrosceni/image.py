@@ -241,7 +241,7 @@ class Image:
     return dec
 
 
-  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, labelCircleColor='b', cmap='afmhot', mode='linear', export_path = None, figsize=None):
+  def plot(self, original=False, showCropped=False, croppedBorder='white', showLabeledStars=False, labelCircleSize=10, labelCircleColor='b', cmap='afmhot', mode='linear', export_path = None, figsize=None, dpi=None):
     """
     Plots the cropped image by default, pass `original=True` to plot the original
 
@@ -288,7 +288,7 @@ class Image:
     if showCropped: original = True
     data = self.getImageData(original)
     
-    fig = plt.figure(figsize=None)
+    fig = plt.figure(figsize=figsize, dpi=dpi)
 
     # wcs = WCS(self.getWCS())
     ax = WCSAxes(fig, [0, 0, 1, 1], wcs=self.getWCS(original=original))
