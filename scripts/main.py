@@ -2,7 +2,6 @@ import click
 from astrosceni.image import Image
 from astrosceni.mufinder import MuFinder
 from astrosceni.stars_filter import StarsFilter
-from matplotlib import pyplot as plt
 
 @click.command()
 @click.option('--nb', type=click.Path(exists=True), required = True, help = 'Narrowband Image Path')
