@@ -21,6 +21,17 @@ class StarsFilter:
 
     #Initializes class
     def __init__ (self, data_directory_path = 'data'):
+        """
+        Instantiates an instance of the StarsFilter class.
+        
+        Parameters
+        ----------
+        data_directory_path: string
+            Optional
+            Default: 'data' (This assumes the home directory is the 'SCENI' directory.)
+            The path to the directory where the star catalogue files are situated in. 
+            Note that this parameter only takes in the path to a directory not a specific file as all the files in said directory will be read.
+        """
         self.original_catalog_df = None
         self.stars_in_region_df = None
         self.stars_visible_df = None
@@ -29,14 +40,49 @@ class StarsFilter:
         self.custom_region = False
         self.catalogue_set = False
 
-        self.data_directory_path = data_directory_path
+        self.data_directory_path = data_directory_path 
+
 
     def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag"):
         """
-        Sets star catalogue desired, and by default saves copy of important star properties (Ra, Dec and Vmag of stars)
-        Uses hipparcos catalogue by default
+        Sets star catalogue desired, and by default saves copy of important star properties (Ra, Dec and Vmag of stars).
+        Uses hipparcos catalogue by default.
+        Do note that different star catalogues use different column names thus, do not always assume that the default is correct.
+
+        Parameters
+        ----------
+        download_catalogue: boolean
+            Optional
+            Default: True
+            Controls whether or not to download the star catalogue files.
+
+        catalogue_id: string
+            Optional
+            Default: "I/239/hip_main"
+            The star catalogue file to use. Only the file name is required, thus exclude the file type, e.g. ".csv".
+
+        ra_col_name: string
+            Optional
+            Default: "_RA.icrs" (This is for the Hipparcos star catalogue)
+            Column name for column with right ascension coordinates.
+
+        dec_col_name: string
+            Optional
+            Default: "_DE.icrs" (This is for the Hipparcos star catalogue)
+            Column name for the column with the declination coordinates.
+
+        app_mag_col_name: string
+            Optional
+            Default: "Vmag" (This is for the Hipparcos star catalogue)
+            Column name for the column with the apparent magnitudes.
         """
+        #connects to data base online, finds the catalogue based on ID.
+        # Saves col names you want only
+        # put in col names and it will only return the columns
+        # Different catalogues have different column names 
+
         #Check if given values are strings
+        # Use the column names as shown on the online databse.
         if (not isinstance(catalogue_id, str)) or (not isinstance(ra_col_name, str)) or (not isinstance(dec_col_name, str)) or (not isinstance(app_mag_col_name, str)):
             raise TypeError("Value must be a string.")
 
@@ -73,20 +119,44 @@ class StarsFilter:
             else:
                 print("Obtaining copy of catalogue from online")
 
+        self.catalogue_set = True # Prevents resetting the catalogue at the end of the function.
 
         #Save catalog dataframe to class
         self.original_catalog_df = catalog_df.copy()
     
+
     #Returns original star catalog
     def getCatalogue(self):
+        """
+        Returns the original star catalog.
+        
+        Returns
+        -------
+        original_catalog_df: Pandas Dataframe
+            The original star catalog."""
         return self.original_catalog_df
     
+
     #Defines region in right ascension and declination
     def setRegion(self, ra_min, ra_max, dec_min, dec_max):
         """
-        Defines region in right ascension and declination
+        Defines region in right ascension and declination.
+
+        Parameters
+        ----------
+        ra_min: float
+            Minimum right ascension coordinate for the region.
+
+        ra_max: float
+            Maximum right ascension coordinate for the region.
+
+        dec_min: float
+            Minimum declination coordinate for the region.
+
+        dec_max: float
+            Maximum declination coordinate for the region.
         """
-        #If region arguments are not floats, returns type error
+        # If region arguments are not floats, returns type error
         if (not isinstance(ra_min, float)) or (not isinstance(ra_max, float)) or (not isinstance(dec_min, float)) or (not isinstance(dec_max, float)):
             raise TypeError("Value must be a float.")
 
@@ -97,27 +167,93 @@ class StarsFilter:
         self.dec_min = dec_min
         self.dec_max = dec_max
     
+
     #Returns region previously defined
     def getRegion(self):
+        """
+        Returns the region defined in the setRegion function.
+
+        Returns
+        -------
+        ra_min: float
+            Minimum right ascension coordinate for the region.
+
+        ra_max: float
+            Maximum right ascension coordinate for the region.
+
+        dec_min: float
+            Minimum declination coordinate for the region.
+
+        dec_max: float
+            Maximum declination coordinate for the region.
+        """
         return self.ra_min, self.ra_max, self.dec_min, self.dec_max
     
     #Sets limits for apparent magnitudes of stars within image
     def setMagLimit(self, mag_min, mag_max):
+        """
+        Sets the limits for the apparent magnitudes of stars within the image.
+
+        Parameters
+        ----------
+        mag_min: float
+            The minimum apparent magnitude.
+
+        mag_max: float
+            The maximum apparent magnitude.
+        """
         self.mag_min = mag_min
         self.mag_max = mag_max
     
+
     #Returns apparent magnitude limits
     def getMagLimit(self):
+        """
+        Returns the apparent magnitude limits as defined in the setMagLimit function.
+
+        Returns
+        ----------
+        mag_min: float
+            The minimum apparent magnitude.
+
+        mag_max: float
+            The maximum apparent magnitude.
+        """
         return self.mag_min, self.mag_max
     
+
     #Sets limits for periods of stars found
     def setPeriodicityLimit(self, period_min, period_max):
+        """
+        Sets the limits for the periods of stars found.
+
+        Parameters
+        ----------
+        period_min: float
+            Minimum period.
+
+        period_max: float
+            Maximum period.
+        """
         self.period_min = period_min
         self.period_max = period_max
         
+
     #Return period limits
     def getPeriodicityLimit(self):
+        """
+        Returns the limits for the periods of stars as defined in the setPeriodicityLimits function.
+
+        Returns
+        -------
+        period_min: float
+            Minimum period.
+
+        period_max: float
+            Maximum period.
+        """
         return self.period_min, self.period_max
+
 
     def setStarsInRegion(self, image):
         """
@@ -125,26 +261,31 @@ class StarsFilter:
         Dataframe Layout:
         Star Identifier #       RA      DEC     Vmag        x_pixels        y_pixels
         ...                     ...     ...     ...         ...             ...     
+
+        Parameter
+        ---------
+        image: numpy array
+            The numpy array of the data for the image. This should be an instance of the Image class - an image object.
         """
 
-        #Checks if image passed is an image object
+        # Checks if image passed is an image object
         if (not isinstance(image, Image)):
             raise TypeError("Parameter must be an image object")
         
-        #Checks that data from image isn't none
+        # Checks that data from image isn't none
         data = image.getImageData(original = False)
         if (data is None):
             raise ValueError("data has datatype None")
 
-        #If no catalogue currently loaded into program, use default catalogue, hipparcos
+        # If no catalogue currently loaded into program, use default catalogue, hipparcos
         if (self.original_catalog_df is None):
             warnings.warn("WARNING: No catalogue set, will use default star catalogue 'Hipparcos'")
             self.setCatalogue()
 
-        #Create copy of catalog to alter
+        # Create copy of catalog to alter
         catalog_df = self.original_catalog_df.copy()
 
-        #If user never specified a custom region, will analyse entire image passed to it
+        # If user never specified a custom region, will analyse entire image passed to it
         if self.custom_region == False:
             #Define the corners of the image
             corners = [
@@ -154,26 +295,26 @@ class StarsFilter:
                 (data.shape[1], data.shape[0])    # Top-right
             ]
 
-            #Decide the Ra and Dec range of the image
+            # Decide the Ra and Dec range of the image
             raCorners, decCorners = (image.getWCS()).pixel_to_world_values(*zip(*corners))
             self.ra_min = min(raCorners)
             self.ra_max = max(raCorners)
             self.dec_min = min(decCorners)
             self.dec_max = max(decCorners)
 
-        #Create a copy of the catalog DF where the only stars remaining are those that are within the bounds set by the image
+        # Create a copy of the catalog DF where the only stars remaining are those that are within the bounds set by the image
         catalog_df = catalog_df[(catalog_df["RA"] >= self.ra_min) &
                                 (catalog_df["RA"] <= self.ra_max) &
                                 (catalog_df["DEC"] >= self.dec_min) &
                                 (catalog_df["DEC"] <= self.dec_max)]
 
-        #Save the coordinates of the filtered catalog and their unit (degrees) within a SkyCoord object
+        # Save the coordinates of the filtered catalog and their unit (degrees) within a SkyCoord object
         star_coords = SkyCoord(ra = catalog_df["RA"], dec = catalog_df["DEC"], unit = 'deg')
 
-        #create 2 pixel arrays with pixels corresponding to star positions on the image
+        # create 2 pixel arrays with pixels corresponding to star positions on the image
         x_pixels, y_pixels = skycoord_to_pixel(star_coords, image.getWCS())
 
-        #Add columns of xPixels and yPixels onto catalog
+        # Add columns of xPixels and yPixels onto catalog
         catalog_df['x_pixels'] = x_pixels
         catalog_df['y_pixels'] = y_pixels
 
@@ -190,9 +331,26 @@ class StarsFilter:
 
         self.stars_in_region_df = catalog_df
 
+
     def extractStarRegion(self, star_index, image, x_y_width):
         """
-        Extracts an n x n grid around the centre of a star for analysis
+        Extracts an n x n grid around the centre of a star for analysis.
+
+        Parameters
+        ----------
+        star_index: integer
+            Index of a star in the star catalogue file.
+
+        image: numpy array
+            The numpy array of the data of the image. This is an instance of the Image class - an image object.
+
+        x_y_width: integer 
+            The halfwidth of the square region to be extracted.
+
+        Returns
+        -------
+        padded_region: numpy array
+            The region which extends beyond the image boundaries. This region will be padded with NaN values.
         """
         star = self.stars_in_region_df.iloc[star_index]
         x, y = int(star['x_pixels']), int(star['y_pixels'])
@@ -213,10 +371,26 @@ class StarsFilter:
 
         return padded_region
 
+
     def plotHistOfStar(self, star_index, image1, image2, print_brightest_pixels = False):
         """
-        Plots a histogram of the star region, with both image 1 (NB) and image 2 (BB)
+        Plots a histogram of the star region, with both image 1 (NB) and image 2 (BB).
+
+        Parameters
+        ----------
+        star_index: integer
+            Index of a star in the star catalogue file.
+
+        image1: numpy array
+            The data for the narrowband image. This should be an instance of the image class - an image object.
+
+        image2: numpy array
+            The data for the broadband image. This should be an instance of the image class - an image object.
+
+        print_brightest_pixels: boolean
+            Controls whether or not to print a line each indicating the brightest pixel within the specified range for the narrowband and broadband images.
         """
+
         region1 = self.extractStarRegion(star_index, image1, 5)
         region2 = self.extractStarRegion(star_index, image2, 5)
 
@@ -232,9 +406,49 @@ class StarsFilter:
         plt.ylabel("Frequency")
         plt.title(f"Histogram of pixel values around star with index {star_index}")
 
+
     def determineVisibilityOfIndividual(self, star_index, image, region_size=10, wiggleRoom = 2, threshold_amp = 500, reduced_chi_squared_bound = 2, print_results = False):
         """
-        Determined whether a star is visible by if a gaussian can be fitted to it, and if the gaussian has a high enough amplitude and low enough reduced chi squared.
+        Determines whether a star is visible based on whether a gaussian can be fitted to it, and if the gaussian has a high enough amplitude and low enough reduced chi squared.
+
+        Parameters
+        ----------
+        star_index: integer
+            Index of a star in the star catalogue file.
+
+        image: numpy array
+            The image data. This should be an instance of the image class - an image object.
+
+        region_size: integer
+            Optional
+            Default: 10
+            Size of the region to consider.
+
+        wiggleRoom: integer
+            Optional
+            Default: 2
+            The size of the region to check for the center of a star.
+            This is in case the position of a star in the star catalogue is slightly off.I
+            If catalogue is slightly inaccurate, the wiggle room checks if there's any oyher brightr pixels around it and shifts the point considered to be the center of the star.
+
+        threshold_amp: integer
+            Optional
+            Default: 500
+            Sets the amplitude condition to determine whether a star is visible.
+            Amplitude is the apparent magnitude at the center of a star according to the Gaussian fit.
+            Anything lower than 500 is definitely not visible.
+
+        reduced_chi_squared_bound: integer
+            Optional
+            Default: 2
+            Sets the chi squared condition to determine whether a star is visible.
+            The lower the chi squared, the better the Gaussian fit.
+            Through empirical testing, Gaussian fits usually have a chi square of 1 or less. Hence, a chi squared >2 is usually a really bad fit.
+
+        print_results: boolean
+            Optional
+            Default: False
+            Controls whether or not to print the result stating whether or not the star is visible.
         """
 
         region = self.extractStarRegion(star_index, image, region_size)
@@ -250,7 +464,7 @@ class StarsFilter:
         y = np.arange(region.shape[0])
         x, y = np.meshgrid(x, y)
 
-        #Retrieve known star position (from cataloge) in full image
+        # Retrieve known star position (from cataloge) in full image
         star = self.stars_in_region_df.iloc[star_index]
         x_full = int(star['x_pixels'])
         y_full = int(star['y_pixels'])
@@ -259,7 +473,8 @@ class StarsFilter:
         x_min = max(x_full - region_size, 0)
         y_min = max(y_full - region_size, 0)
 
-        #Initial guess for gaussian center as local maximum
+        # Initial guess for gaussian center as local maximum
+        # Assume brightest point at middle of a star (best place to fit Guassian)
         x0_initial = x_full - x_min
         y0_initial = y_full - y_min
 
@@ -280,7 +495,11 @@ class StarsFilter:
         [x0_initial - wiggleRoom, y0_initial - wiggleRoom, 0, 0, -np.inf],
         [x0_initial + wiggleRoom, y0_initial + wiggleRoom, np.inf, np.inf, np.inf]
         )                  
+        # changes few parameters of the gaussian for best fit
+        # Gaussian found would have an amplitude
+        # Computes a reduced chi square - used to determine how good a Gaussian fit is
 
+        # Testing Gaussian
         try:
             popt, pcov = curve_fit(
                 gaussian_2d,
@@ -300,6 +519,7 @@ class StarsFilter:
         #Compute model values for entire region using fitted parameters
         model_values = gaussian_2d((x, y), *popt).reshape(region.shape)
         residuals = region - model_values
+
         #Calculate chi-squared using only valid datapoints
         chi_squared = np.sum((residuals[mask]/np.nanstd(region[mask])) ** 2)
         reduced_chi_squared = chi_squared / (mask.sum() - len(popt))
@@ -307,18 +527,60 @@ class StarsFilter:
         # Check if star is bright enough and ensure fit is reliable
         if print_results == True:
             print("Star index: ", star_index, ". Amplitude: ", amplitude, ". Reduced Chi Squared: ", reduced_chi_squared)
+
+        # Amplitude is the brightness of the middle pixel according to the Gaussian.
+        # anything lower than 500, definitely not visible
+        # THe lower the reduced chi square, the more accurate
+        # Through empirical testing, usually most Gaussian fittings are around 1 or less, usually really bad Gaussian fitting will have chi squared >2
         if (amplitude > threshold_amp) and (reduced_chi_squared < reduced_chi_squared_bound):
             if print_results == True:
                 print("Star is considered visible")
             return True # Star is visible
         
         if print_results == True:
-            print("Star is not considered visible, Amplitude is not greater than threshold amp and reduced_chi_squared is not less than 2")
+            print(f"Star is not considered visible, amplitude is not greater than {threshold_amp} and reduced chi squared is not less than {reduced_chi_squared_bound}}")
         return False    # Star is not visible 
+
 
     def setVisibleStars(self, image, print_results = False, region_size = 10, wiggleRoom = 2, threshold_amp = 500, reduced_chi_squared_bound = 2):
         """
-        Iterates through all stars in image and determines if they are visible, saves new, shortened, dataframe
+        Iterates through all stars in image and determines if they are visible, saves new, shortened, dataframe.
+
+        Parameters
+        ----------
+        image: numpy array
+            The image data. This should be an instance of the image class - an image object.
+
+        print_results: boolean
+            Optional
+            Default: False
+            Controls whether or not to print the result stating whether a star is visible.
+
+        region_size: integer
+            Optional
+            Default: 10
+            Sets the size of the region to consider.
+
+        wiggleRoom: integer
+            Optional
+            Default: 2
+            The size of the region to check for the center of a star.
+            This is in case the position of a star in the star catalogue is slightly off.I
+            If catalogue is slightly inaccurate, the wiggle room checks if there's any oyher brightr pixels around it and shifts the point considered to be the center of the star.
+
+        threshold_amp: integer
+            Optional
+            Default: 500
+            Sets the amplitude condition to determine whether a star is visible.
+            Amplitude is the apparent magnitude at the center of a star according to the Gaussian fit.
+            Anything lower than 500 is definitely not visible.
+
+        reduced_chi_squared_bound: integer
+            Optional
+            Default: 2
+            Sets the chi squared condition to determine whether a star is visible.
+            The lower the chi squared, the better the Gaussian fit.
+            Through empirical testing, Gaussian fits usually have a chi square of 1 or less. Hence, a chi squared >2 is usually a really bad fit.
         """
         visible_stars = []
         for i in range(len(self.stars_in_region_df)):
@@ -326,9 +588,30 @@ class StarsFilter:
                 visible_stars.append(self.stars_in_region_df.iloc[i])
         self.stars_visible_df = pd.DataFrame(visible_stars)
 
+
     def removeVisibleStars(self, image, region_size = 10, annulus_width = 2):
         """
-        Replaces visible stars with the estimated background level, size of which can be determined by user
+        Replaces visible stars with the estimated background level, size of which can be determined by user.
+
+        Parameters
+        ----------
+        image: numpy array
+            The image data. This should be an instance of the image class - an image object.
+        
+        region_size: integer
+            Optional
+            Default: 10
+            Sets the size of the region to consider.
+
+        annulus_width: integer
+            Optional
+            Default: 2
+            Sets the width of the annulus around a star region to estimate the background brightness.
+
+        Returns
+        -------
+        result: numpy array
+            The new image data. This is an instance of the image class - an image object.
         """
         #Creates copy of image data
         new_image_data = image.getImageData().copy()
@@ -380,20 +663,54 @@ class StarsFilter:
         result.setImageData(new_image_data)
         return result
 
-    #Returns the list of stars in region
+
+    # Returns the list of stars in region
     def getStarsInRegion(self):
+        """
+        Returns the list of stars in a region
+    
+        Returns
+        -------
+        stars_in_region_df: pandas dataframe
+        List of stars in a region defined in the extractStarRegion function.
+        """
+
         return self.stars_in_region_df
     
-    #Returns list of visible stars in region
+
+    # Returns list of visible stars in region
     def getVisibleStars(self):
+        """
+        Returns a list of visible stars in a region
+        
+        Returns
+        -------
+        stars_visible_df: pandas dataframe
+            List of visible stars in a region defined in the setVisibleStars function.
+        """
         return self.stars_visible_df
     
-    #Simple usage, pass the image and will return array of data with visible stars removed
-    def filterStars(self, image):
+
+    # Simple usage, pass the image and will return array of data with visible stars removed
+    def filterStars(self, image, print_findings = False):
         """
-        All encompassing function, acts as simple usage of class. Returns data of image with visible stars already removed, uses default parameters
+        All encompassing function, acts as simple usage of class. Returns data of image with visible stars already removed, uses default parameters.
+
+        Parameters
+        ----------
+        image: numpy array
+            The image data. This should be an instance of the image class - an image object.
+
+        print_findings: boolean
+            Optional
+            Default: False
+            Controls whether or not to print the stars in the stipulated region and all the visible stars in the stipulated region.
+
+        Returns
+        -------
+        A numpy array with all the visible stars replaced with the estimated background brightness. This is an instance of the image class - an image object.
         """    
-        #If no catalogue specifically chosen, fall back to hipparcus
+        #If no catalogue specifically chosen, fall back to hipparcos
         if self.catalogue_set == False:
             self.setCatalogue(download_catalogue = True)
             self.catalogue_set = True
@@ -405,7 +722,8 @@ class StarsFilter:
         self.setVisibleStars(image)
 
         # Returns data of image with visible stars removed
-        print("Stars in region:", len(self.stars_in_region_df))
-        print("Visible stars:", len(self.stars_visible_df))
+        if print_findings == True:
+            print("Stars in region:", len(self.stars_in_region_df))
+            print("Visible stars:", len(self.stars_visible_df))
 
         return self.removeVisibleStars(image)
