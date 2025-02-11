@@ -26,10 +26,10 @@ Based on the following paper: https://www.jstor.org/stable/10.1086/674666
 The Image class handles the loading and manipulation of .fits files
 
 **Key Methods**
-- 'load()': Loads a '.fits' file.
-- 'cropPixels()': Crops an image down to a specified amount of pixels
-- 'plot()': Plots image with a large amount of user choice
-- 'subtract()': Subtracts one image from another by a scaling factor mu
+- `load()`: Loads a '.fits' file.
+- `cropPixels()`: Crops an image down to a specified amount of pixels
+- `plot()`: Plots image with a large amount of user choice
+- `subtract()`: Subtracts one image from another by a scaling factor mu
 
 **Example:**
 ```python
@@ -43,9 +43,9 @@ result_img = Image.subtract(nb_img, bb_imb, mu)
 Main purpose of this class is to determine what scaling factor (mu) is optimal in order to subtract the broadband image from the narrowband image and leave behind the emission spectrum being observed without losing too much information.
 
 **Key Methods**
-- 'mufinder = MuFinder(nb_img, bb_img, mu_range = None)': Loads both images into the MuFinder, if no mu range specified rough mu range will be generated
-- 'getOptimalMus()': Returns optimal mu values in an array
-- 'getResultImages(): Returns an array of pre-subtracted images with each optimal mu'
+- `mufinder = MuFinder(nb_img, bb_img, mu_range = None)`: Loads both images into the MuFinder, if no mu range specified rough mu range will be generated
+- `getOptimalMus()`: Returns optimal mu values in an array
+- `getResultImages()`: Returns an array of pre-subtracted images with each optimal mu
 
 **Example:**
 ```python
@@ -57,11 +57,11 @@ result_imgs = mufinder.getResultImages()
 When given an image, uses an external star catalogue (by defauly Hipparcus) to identify stars within the bounds of the image, determines which stars are visible and can subsequently remove them
 
 **Key Methods**
-- 'setCatalogue()': Sets catalogue to be hipparcus catalogue by default (can pass additional arguments to change this). Can also download catalogue to data folder if specified
-- 'setStarsInRegion(img)': Returns dataframe of stars from the catalogue that are within the bounds of the iamge and their x and y pixel positions
-- 'setVisibleStars(img)': Returns dataframe of stars from the catalogue that are within the bounds of the image only if they are considered visible by gaussian fitting
-- 'removeVisibleStars(img)': Removes visible stars from image
-- 'filterStars(img)': All encompassing function, includes all of the above
+- `setCatalogue()`: Sets catalogue to be hipparcus catalogue by default (can pass additional arguments to change this). Can also download catalogue to data folder if specified
+- `setStarsInRegion(img)`: Returns dataframe of stars from the catalogue that are within the bounds of the iamge and their x and y pixel positions
+- `setVisibleStars(img)`: Returns dataframe of stars from the catalogue that are within the bounds of the image only if they are considered visible by gaussian fitting
+- `removeVisibleStars(img)`: Removes visible stars from image
+- `filterStars(img)`: All encompassing function, includes all of the above
 
 **Example:**
 ```python
