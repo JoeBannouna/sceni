@@ -126,6 +126,27 @@ class Image:
   def cropPixels(self, x_start=None, x_end=None, y_start=None, y_end=None, original=True):
     """
     Creates a cutout of the original image, to crop the currently cropped image pass `original=False`
+
+    Parameters
+    ----------
+    x_start: integer
+      Default: First x index.
+      Starting x coordinate for the crop.
+    
+    x_end: integer
+      Default: Last x index.
+      Ending x coordinate for the crop.
+
+    y_start: integer
+      Default: First y index.
+      Starting y coordinate for the crop.
+
+    y_end: integer
+      Default: Last y index.
+      Ending y coordinate for the crop.
+
+    original: boolean
+      Whether to use the original (if `original=True`) or the cropped image (if `original=False`)
     """
     data = self.getImageData(original)
     ny, nx = data.shape
@@ -635,7 +656,16 @@ class Image:
     plt.ylabel("Y-Axis") 
     plt.show()
   
+
   def plotHist(self, nbins=200):
+    """
+    Plot a histogram of the number of pixels vs pixel content on a log scale.
+
+    Parameter
+    ---------
+    nbins: integer
+      Number of bins for the histogram plot.
+    """
     # flatten means: we put our 2d array in a 1d array
     plt.hist(self.getImageData().flatten(), nbins)
 
