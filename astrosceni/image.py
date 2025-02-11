@@ -284,6 +284,16 @@ class Image:
       Optional
       Default: None
       Sets the string to be where the plot is exported. Doesn't export if no string given
+
+    figsize: (float, float)
+      optional
+      Default: None
+      Sets the width and height in inches
+
+    dpi: float
+      optional
+      Default: None
+      Sets the dots per square inch of the plot, acts as resolution
     """
     if showCropped: original = True
     data = self.getImageData(original)
