@@ -20,6 +20,14 @@ warnings.formatwarning = lambda message, *args: f"{message}\n"
 
 class Image:
   def __init__(self, path=None):
+    """
+    Instantiates an instance of the Image class.
+    
+    Parameters
+    ----------
+    path: string
+      Path to the image file.
+    """
     self.path = ""
     self.labeled_starts = None
     self.original_data = None
