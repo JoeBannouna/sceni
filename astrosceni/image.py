@@ -518,7 +518,8 @@ class Image:
     Subtracts the pixel values between the NB and BB image according to the equation:
       NB - mu*BB
     
-    Parameters:
+    Parameters
+    ----------
     NB_Image: numpy array
       Numpy array of the pixel values for the NB (narrowband) image.
 
