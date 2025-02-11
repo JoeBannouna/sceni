@@ -139,14 +139,49 @@ class MuFinder:
         return self.skewness_vals
 
 
-    def plotSkewnessVals(self):
+    def plotSkewnessVals(self, h_line = True, v_line = True):
         """
-        Plots skewness values vs mu.
-        """
+        Plots the skewness vs the corresponding mu scaling factors
 
+        Parameters:
+        -------
+        h_line: boolean
+            optional
+            default: True
+            Draws a horizontal line where skewness = 0
+        
+        v_line: boolean
+            optional
+            default: True
+            Draws a vertical line at the Mu closest to where skewness = 0
+
+        """
+        skewnessVals = self.getSkewnessVals()
         plt.xlabel('$^\mu$')
         plt.ylabel('s($^\mu$)')
-        plt.plot(self.mu_linspace, self.getSkewnessVals(), '.')
+        plt.plot(self.mu_linspace, skewnessVals)
+
+        if h_line == True:
+            plt.axhline(y = 0)
+
+        if v_line == True:
+            plt.axvline(x = self.getCorrespondingMu())
+
+    def getCorrespondingMu(self, skewness=0):
+        """
+        Returns the corresponding mu for a given skew
+
+        Parameters:
+        -------
+        skewness: float
+            optional
+            default: 0
+            The mu that will be returned is the mu in the mu_linspace that best matches to this skewness
+        """
+        skewness_vals = self.getSkewnessVals()
+        closest_idx = np.argmin(np.abs(np.array(skewness_vals)-skewness))
+
+        return self.mu_linspace[closest_idx]
 
 
     def getOptimalMus(self):
