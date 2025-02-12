@@ -590,6 +590,117 @@ class Image:
     self.labeled_starts = stars_filter.getVisibleStars()
 
 
+  def zoomToStar(self, catalogue_df, star_id, zoom_size, custom_vmin = None, custom_vmax = None, custom_cmap = 'grey', show_colorbar = True,
+                   setSaturatedToNan = False, use_log_norm = False):
+    """
+    Zooms into a given star based on the star identification.
+
+    Parameters
+    ----------
+    catalogue_df: pandas dataframe
+      The dataframe for the star catalogue.
+      This catalogue must have the starID column.
+
+    star_id: string
+      Identification for the star used in the provided catalogue.
+
+    zoom_size: integer
+      Optional
+      Default: 50
+      Sets the magnification. It is the half-width of the zoom-in window in pixels.
+
+    original: boolean
+      Optional
+      Default: False (i.e. zooms from the cropped image)
+      Controls whether to zoom from the original image (if True) or from the cropped image (if False).
+
+    custom_vmin: integer
+      Optional
+      Default: Minimum pixel value
+      Sets the value for the minimum value of the colorbar when plotting the image.
+
+    custom_vmax: integer
+      Optional
+      Default: Maximum pixel value
+      Sets the value for the maximum value of the colorbar when plotting the image.
+
+    custom_cmap: string
+      Optional
+      Default: grey
+      Sets the colormap when plotting the image.
+
+    show_colorbar: boolean
+      Optional
+      Default: True
+      Controls whether or not to show the colorbar.
+
+    setSaturatedToNan: boolean
+      Optional 
+      Default: False
+      Controls whether or not to set the pixel values of saturated pixels to NaN.
+      Each image has a maximum pixel value (max brightness) for which any greater values (brightness) will be set to this max pixel value. Pixels with such a value are saturated.
+    
+    use_log_norm: boolean
+      Optional
+      Default: False
+      Controls whether or not to plot the image using LogNorm.
+    """
+    
+    star_df = catalogue_df[(catalogue_df["starID"] == star_id)]
+
+    # x, y = SkyCoord(star_df['RA'], star_df['DEC'], unit='deg').to_pixel(self.getWCS())
+
+    ra_value = star_df.iloc[0]['RA']
+    dec_value = star_df.iloc[0]['DEC']
+
+    try:
+      x, y = SkyCoord(ra_value, dec_value, unit='deg').to_pixel(self.getWCS())
+    
+    except Exception as e:
+        raise RuntimeError(f"Error converting sky coordinates to pixel coordinates: {e}")
+
+    data = self.getImageData()
+
+
+    # Defining zoom window size
+    x_start, x_end = max(0, x - zoom_size), min(x + zoom_size, data.shape[1]) # Restrict x_start >= 0; x - zoom_size is the half width of the zoomed image along x-axis
+    y_start, y_end = max(0, y - zoom_size), min(y + zoom_size, data.shape[0]) # Restrict y_start >= 0; y - zoom_size is the half width of the zoom image along y-axis
+
+    #Extract zoom region
+    zoomed_data = data[int(y_start):int(y_end), int(x_start):int(x_end)]
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    if (custom_vmin == None):
+      vmin = np.nanmin(data)
+    else:
+      vmin = custom_vmin
+    if (custom_vmax == None):
+      vmax = np.nanmax(data)
+    else:
+      vmax = custom_vmax
+
+    norm = None
+    if (use_log_norm == True):
+      norm = LogNorm(vmin=vmin, vmax=vmax)
+      img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, norm=norm)
+    else:
+      img = ax.imshow(zoomed_data, origin = 'lower', cmap = custom_cmap, vmin = vmin, vmax = vmax)
+
+    ax.scatter(x_start, y_start, color = 'red', marker = '+', label = "Zoom Center")
+    ax.set_xlim(0, x_end - x_start)
+    ax.set_ylim(0, y_end - y_start)
+    ax.set_title(f"Zoomed-in View (Center: x = {x}, y = {y})")
+    ax.set_xlabel("X Pixel")
+    ax.set_ylabel("Y Pixel")
+    ax.legend()
+
+    if (show_colorbar == True):
+      cbar = fig.colorbar(img, ax = ax, fraction = 0.05, pad = 0.04)
+      cbar.set_label("Pixel Intensity")
+
+    plt.show()
+
+
   def plotContour(self, sigma = None, levels = 5, cmap = 'viridis', norm_type = 'linear', base_cmap = 'gray', overlay = False, alpha = 0.5):
     """
     Plots a contour over the image which outlines the boundaries of all features.
