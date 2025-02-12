@@ -195,10 +195,10 @@ class MuFinder:
         """
 
         # Obtains possible optimal mus.
-        # The smaller of the possible values is the truemal mu.
+        # The smaller of the possible values is the true optimal mu.
 
         skews = self.getSkewnessVals()
-        roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots()
+        roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots() # Roots are the optimal mu. Use spline to find derivative to find optimal mu.
         roots = roots[roots < self.mu_range[1]]
         roots = roots[roots > self.mu_range[0]]
         return roots

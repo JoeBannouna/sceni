@@ -43,7 +43,7 @@ class StarsFilter:
         self.data_directory_path = data_directory_path 
 
 
-    def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag"):
+    def setCatalogue(self, download_catalogue = True, catalogue_id = "I/239/hip_main", star_id_col_name = None, ra_col_name = "_RA.icrs", dec_col_name = "_DE.icrs", app_mag_col_name = "Vmag"):
         """
         Sets star catalogue desired, and by default saves copy of important star properties (Ra, Dec and Vmag of stars).
         Uses hipparcos catalogue by default.
@@ -61,10 +61,15 @@ class StarsFilter:
             Default: "I/239/hip_main"
             The star catalogue file to use. Only the file name is required, thus exclude the file type, e.g. ".csv".
 
+        star_id_col_name: string
+            Optional
+            Default: None (This would leave out the star identification column when read.)
+            Column name for the column with the star identifications.
+
         ra_col_name: string
             Optional
             Default: "_RA.icrs" (This is for the Hipparcos star catalogue)
-            Column name for column with right ascension coordinates.
+            Column name for the column with right ascension coordinates.
 
         dec_col_name: string
             Optional
@@ -99,6 +104,27 @@ class StarsFilter:
         if (os.path.isfile(file_path)):
             print("Previous saved catalog file found.")
             catalog_df = pd.read_csv(file_path)
+
+        elif(star_id_col_name is not None):
+            print("Previous saved catalog file not found")
+            print("Downloading new copy")
+
+            #Obtain catalog using astroquery utilising the catalog ID
+            vizier = Vizier(columns = [ra_col_name, dec_col_name, app_mag_col_name, star_id_col_name])
+            vizier.ROW_LIMIT = -1
+            catalog_data = vizier.get_catalogs(catalogue_id)[0]
+            catalog_df = catalog_data.to_pandas()
+            print(catalog_df.columns)
+
+            catalog_df = catalog_df.rename(columns={catalog_df.columns[0]: "RA", catalog_df.columns[1]: "DEC", catalog_df.columns[2]: "Vmag", catalog_df.columns[3]: "starID"})
+
+            #Unless user doesnt specify, download catalogue to file
+            if download_catalogue == True:
+                catalog_df.to_csv(file_path, index = False)
+                print("Saving copy of catalogue from online into .csv file")
+            else:
+                print("Obtaining copy of catalogue from online")
+
         else:
             print("Previous saved catalog file not found")
             print("Downloading new copy")
@@ -133,7 +159,10 @@ class StarsFilter:
         Returns
         -------
         original_catalog_df: Pandas Dataframe
-            The original star catalog."""
+            The original star catalog.
+            
+        """
+        
         return self.original_catalog_df
     
 
