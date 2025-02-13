@@ -632,7 +632,7 @@ class Image:
 
 
   def zoomToStar(self, catalogue_df, star_id, zoom_size, custom_vmin = None, custom_vmax = None, custom_cmap = 'grey', show_colorbar = True,
-                   setSaturatedToNan = False, use_log_norm = False):
+                   use_log_norm = False):
     """
     Zooms into a given star based on the star identification.
 
@@ -677,12 +677,6 @@ class Image:
       Default: True
       Controls whether or not to show the colorbar.
 
-    setSaturatedToNan: boolean
-      Optional 
-      Default: False
-      Controls whether or not to set the pixel values of saturated pixels to NaN.
-      Each image has a maximum pixel value (max brightness) for which any greater values (brightness) will be set to this max pixel value. Pixels with such a value are saturated.
-    
     use_log_norm: boolean
       Optional
       Default: False
