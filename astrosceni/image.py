@@ -398,6 +398,8 @@ class Image:
       Optional
       Default: 50
       Sets the magnification. It is the half-width of the zoom-in window in pixels.
+      The lower the zoom_size, the more zoomed in the image is. 
+      The limit is zoom_size=1.
 
     original: boolean
       Optional
@@ -647,6 +649,8 @@ class Image:
       Optional
       Default: 50
       Sets the magnification. It is the half-width of the zoom-in window in pixels.
+      The lower the zoom_size, the more zoomed in the image is. 
+      The limit is zoom_size=1.
 
     original: boolean
       Optional
