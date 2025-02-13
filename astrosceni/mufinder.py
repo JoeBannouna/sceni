@@ -197,10 +197,18 @@ class MuFinder:
         # Obtains possible optimal mus.
         # The smaller of the possible values is the true optimal mu.
 
-        skews = self.getSkewnessVals()
+        skews = self.getSkewnessVals() # This is a numpy array
         roots = PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).roots() # Roots are the optimal mu. Use spline to find derivative to find optimal mu.
+        # PPoly.from_spline constructs a piecewise polynomial from a spline
+        # numpy.roots(p) outputs a numpy array with the roots of a polynomial with coefficients p.
+        # e.g. roots(1, 3, 2) outputs array([-1,, -2])
+        # Access the coefficients of PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()) using .c e.g.:
+        #   PPoly.from_spline(make_splrep(self.mu_linspace, skews).derivative()).c
+        
         roots = roots[roots < self.mu_range[1]]
         roots = roots[roots > self.mu_range[0]]
+
+        #print(roots2ndDerivative)
         return roots
 
 
