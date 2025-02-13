@@ -644,6 +644,27 @@ class Image:
       Optional
       Default: False
       Controls whether or not to plot the image using LogNorm.
+
+    Notes
+    -----
+    Quick tutorial:
+    1. Intantiate the narrowband and broadband images under the Image class.
+      `img = Image("<file path>")`
+
+    2. Instantiate the star catalogues under the StarsFilter class.
+      `starsFilter = StarsFilter(data_directory_path = '<star catalogues' folder path>')`
+
+    3. Set star catalogue:
+      `starsFilter.setCatalogue(catalogue_id="catalogue  ID", star_id_col_name = "star ID column name", ra_col_name = "right ascension column name", dec_col_name = "declination column name", app_mag_col_name = "<apparent magnitude column name>")`
+    
+    4. Apply the setStarsInRegion function.
+      `starsFilter.setStarsInRegion(img)`
+
+    5. Apply the setVisibleStars function.
+      `starsFilter.setVisibleStars(Img)`
+
+    6. Call the zoomToStar function
+      `img.zoomToStar(<parameters>)`
     """
     
     star_df = catalogue_df[(catalogue_df["starID"] == star_id)]
