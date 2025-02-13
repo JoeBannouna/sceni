@@ -10,6 +10,8 @@ from astropy.visualization.wcsaxes import WCSAxes
 from matplotlib.colors import LogNorm, SymLogNorm
 from astropy.nddata import Cutout2D
 from scipy.ndimage import gaussian_filter
+from mpl_toolkits.mplot3d import Axes3D
+from astropy.convolution import Gaussian2DKernel, convolve
 import os, warnings
 
 #Simplifies warning message
@@ -329,6 +331,43 @@ class Image:
 
     if export_path:
       fig.savefig(export_path, bbox_inches = 'tight', pad_inches = 0.2)
+
+    plt.show()
+
+  def plot3D(self, x_start = None, x_end = None, y_start = None, y_end = None, cmap = 'viridis', elevation = 30, rotation = 45, log_scale = False):
+    if y_start == None: y_start = 0
+    if y_end == None: y_end = len(self.getImageData())
+    if x_start == None: x_start = 0
+    if x_end == None: x_end = len(self.getImageData()[0])
+
+    data = self.getImageData()
+
+    print(x_start, x_end, y_start, y_end)
+
+    x_range=slice(x_start, x_end)
+    y_range=slice(y_start, y_end)
+    data_cut = data[y_range, x_range]
+
+    y, x = np.mgrid[y_range.start:y_range.stop, x_range.start:x_range.stop]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    if log_scale == True:
+      #Check if min is 0, shift by one 
+      if np.min(data_cut) == 0:
+        data_cut = data_cut - np.min(data_cut) + 1
+      data_cut = np.log10(data_cut)
+
+    surface = ax.plot_surface(x, y, data_cut, cmap=cmap)
+
+    ax.view_init(elev = elevation, azim = rotation)
+    ax.set_title("3D Surface Plot of FITS Image")
+    ax.set_xlabel("X Pixel")
+    ax.set_ylabel("Y Pixel")
+    ax.set_zlabel("Intensity")
+
+    fig.colorbar(surface)
 
     plt.show()
 
